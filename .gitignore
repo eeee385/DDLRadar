@@ -1,0 +1,4 @@
+/target
+*.db
+.claude/
+Cargo.lock
