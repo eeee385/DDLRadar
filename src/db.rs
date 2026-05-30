@@ -1,6 +1,6 @@
-use rusqlite::{params, Connection, Result};
 use crate::error::AppError;
 use crate::models::*;
+use rusqlite::{params, Connection, Result};
 
 // --- Schema ---
 
@@ -17,7 +17,7 @@ pub fn init_db(conn: &Connection) -> Result<()> {
             description TEXT NOT NULL DEFAULT '',
             created_at  TEXT NOT NULL DEFAULT (datetime('now','localtime')),
             updated_at  TEXT NOT NULL DEFAULT (datetime('now','localtime'))
-        );"
+        );",
     )
 }
 
@@ -145,9 +145,8 @@ pub fn query_tasks(conn: &Connection, params: &TaskQueryParams) -> Result<Vec<Ta
 }
 
 pub fn modify_task(conn: &Connection, id: i64, req: &UpdateTaskRequest) -> Result<Task, AppError> {
-    let existing = find_task_by_id(conn, id)?.ok_or_else(|| {
-        AppError::NotFound(format!("Task with id {} not found", id))
-    })?;
+    let existing = find_task_by_id(conn, id)?
+        .ok_or_else(|| AppError::NotFound(format!("Task with id {} not found", id)))?;
 
     let title = req.title.as_ref().unwrap_or(&existing.title);
     let course = req.course.as_ref().unwrap_or(&existing.course);
@@ -185,17 +184,25 @@ pub fn remove_task(conn: &Connection, id: i64) -> Result<bool> {
 pub fn count_tasks_by_status(conn: &Connection) -> Result<(i64, i64, i64, i64)> {
     let total: i64 = conn.query_row("SELECT COUNT(*) FROM tasks", [], |r| r.get(0))?;
     let todo_count: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM tasks WHERE status = 'todo'", [], |r| r.get(0))?;
+        "SELECT COUNT(*) FROM tasks WHERE status = 'todo'",
+        [],
+        |r| r.get(0),
+    )?;
     let doing_count: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM tasks WHERE status = 'doing'", [], |r| r.get(0))?;
+        "SELECT COUNT(*) FROM tasks WHERE status = 'doing'",
+        [],
+        |r| r.get(0),
+    )?;
     let done_count: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM tasks WHERE status = 'done'", [], |r| r.get(0))?;
+        "SELECT COUNT(*) FROM tasks WHERE status = 'done'",
+        [],
+        |r| r.get(0),
+    )?;
     Ok((total, todo_count, doing_count, done_count))
 }
 
 pub fn get_non_done_tasks(conn: &Connection) -> Result<Vec<Task>> {
-    let mut stmt = conn.prepare(
-        "SELECT * FROM tasks WHERE status != 'done'")?;
+    let mut stmt = conn.prepare("SELECT * FROM tasks WHERE status != 'done'")?;
     let rows = stmt.query_map([], row_to_task)?;
     let mut tasks = Vec::new();
     for task in rows {

@@ -24,8 +24,7 @@ pub async fn dashboard(
     let mut high_risk_count = 0i64;
 
     for task in &non_done_tasks {
-        let risk_info =
-            risk::calculate_risk(&task.deadline, &task.priority, &task.status, now);
+        let risk_info = risk::calculate_risk(&task.deadline, &task.priority, &task.status, now);
         if risk_info.is_overdue {
             overdue_count += 1;
         }
