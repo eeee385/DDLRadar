@@ -30,6 +30,7 @@ var DDLRadar = (function () {
 
     dom.taskForm.addEventListener('submit', handleFormSubmit);
     dom.taskList.addEventListener('click', handleTaskListClick);
+    dom.taskList.addEventListener('change', handleTaskListChange);
 
     loadTasks();
   }
@@ -137,6 +138,60 @@ var DDLRadar = (function () {
       });
   }
 
+  function handleTaskListChange(e) {
+    var select = e.target.closest('.select-status');
+    if (!select) return;
+
+    var card = select.closest('.task-card');
+    if (!card) return;
+
+    var taskJson = card.getAttribute('data-task');
+    if (!taskJson) return;
+
+    var task;
+    try {
+      task = JSON.parse(taskJson);
+    } catch (err) {
+      console.error('解析任务数据失败:', err);
+      return;
+    }
+
+    var newStatus = select.value;
+    if (task.status === newStatus) return;
+
+    var payload = {
+      title: task.title || '',
+      course: task.course || '',
+      task_type: task.task_type || '',
+      deadline: task.deadline || '',
+      priority: task.priority || 'mid',
+      status: newStatus,
+      description: task.description || ''
+    };
+
+    updateTaskStatus(task.id, payload);
+  }
+
+  function updateTaskStatus(taskId, payload) {
+    fetch(API_BASE + '/api/tasks/' + encodeURIComponent(taskId), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function () {
+        showFormMessage('状态更新成功', 'success');
+        loadTasks();
+      })
+      .catch(function (err) {
+        console.error('状态更新失败:', err);
+        showFormMessage('状态更新失败，请检查后端是否运行', 'error');
+      });
+  }
+
   function renderTasks(tasks) {
     if (!tasks || tasks.length === 0) {
       dom.taskList.innerHTML = '<p class="placeholder-text">暂无任务数据，请先添加任务</p>';
@@ -156,11 +211,18 @@ var DDLRadar = (function () {
     var typeLabel = TYPE_LABEL[task.task_type] || task.task_type || '';
     var deadline = escHtml(task.deadline || '');
     var priorityLabel = PRIORITY_LABEL[task.priority] || task.priority || '';
-    var statusLabel = STATUS_LABEL[task.status] || task.status || '';
     var riskLevel = task.risk_level || '';
+    var currentStatus = task.status || 'todo';
+    var taskJson = JSON.stringify(task);
+
+    var statusOptions = ''
+      + '<option value="todo"' + (currentStatus === 'todo' ? ' selected' : '') + '>待办</option>'
+      + '<option value="doing"' + (currentStatus === 'doing' ? ' selected' : '') + '>进行中</option>'
+      + '<option value="done"' + (currentStatus === 'done' ? ' selected' : '') + '>已完成</option>';
 
     return ''
-      + '<div class="task-card" style="background:#fff;border-radius:6px;padding:12px 16px;margin-bottom:10px;'
+      + '<div class="task-card" data-task="' + escAttr(taskJson) + '"'
+      + ' style="background:#fff;border-radius:6px;padding:12px 16px;margin-bottom:10px;'
       + 'box-shadow:0 1px 3px rgba(0,0,0,0.08);border-left:4px solid ' + borderColor(riskLevel) + ';'
       + 'display:flex;justify-content:space-between;align-items:flex-start;">'
       +   '<div>'
@@ -170,13 +232,18 @@ var DDLRadar = (function () {
       +       '<span>类型: ' + typeLabel + '</span>'
       +       '<span>截止: ' + deadline + '</span>'
       +       '<span>优先级: ' + priorityLabel + '</span>'
-      +       '<span>状态: ' + statusLabel + '</span>'
       +       '<span>风险: ' + riskLevel + '</span>'
       +     '</div>'
       +   '</div>'
-      +   '<button class="btn-delete" data-delete-id="' + escHtml(String(task.id)) + '"'
-      +   ' style="flex-shrink:0;padding:4px 12px;font-size:12px;border:1px solid #d63031;'
-      +   'background:#fff;color:#d63031;border-radius:4px;cursor:pointer;">删除</button>'
+      +   '<div style="flex-shrink:0;display:flex;align-items:center;gap:6px;">'
+      +     '<select class="select-status" data-task-id="' + escHtml(String(task.id)) + '"'
+      +     ' style="padding:3px 6px;font-size:12px;border:1px solid #dfe6e9;border-radius:3px;background:#fff;">'
+      +     statusOptions
+      +     '</select>'
+      +     '<button class="btn-delete" data-delete-id="' + escHtml(String(task.id)) + '"'
+      +     ' style="padding:4px 12px;font-size:12px;border:1px solid #d63031;'
+      +     'background:#fff;color:#d63031;border-radius:4px;cursor:pointer;">删除</button>'
+      +   '</div>'
       + '</div>';
   }
 
@@ -192,6 +259,12 @@ var DDLRadar = (function () {
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function escAttr(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
       .replace(/"/g, '&quot;');
   }
 
