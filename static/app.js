@@ -140,8 +140,19 @@ var DDLRadar = (function () {
 
   function handleTaskListChange(e) {
     var select = e.target.closest('.select-status');
-    if (!select) return;
+    if (select) {
+      handleStatusChange(select);
+      return;
+    }
 
+    var deadlineInput = e.target.closest('.input-deadline');
+    if (deadlineInput) {
+      handleDeadlineChange(deadlineInput);
+      return;
+    }
+  }
+
+  function handleStatusChange(select) {
     var card = select.closest('.task-card');
     if (!card) return;
 
@@ -172,6 +183,36 @@ var DDLRadar = (function () {
     updateTaskStatus(task.id, payload);
   }
 
+  function handleDeadlineChange(input) {
+    var card = input.closest('.task-card');
+    if (!card) return;
+
+    var taskJson = card.getAttribute('data-task');
+    if (!taskJson) return;
+
+    var task;
+    try {
+      task = JSON.parse(taskJson);
+    } catch (err) {
+      console.error('解析任务数据失败:', err);
+      return;
+    }
+
+    var newDeadline = fromDatetimeLocal(input.value);
+
+    var payload = {
+      title: task.title || '',
+      course: task.course || '',
+      task_type: task.task_type || '',
+      deadline: newDeadline,
+      priority: task.priority || 'mid',
+      status: task.status || 'todo',
+      description: task.description || ''
+    };
+
+    updateTaskDeadline(task.id, payload);
+  }
+
   function updateTaskStatus(taskId, payload) {
     fetch(API_BASE + '/api/tasks/' + encodeURIComponent(taskId), {
       method: 'PUT',
@@ -190,6 +231,34 @@ var DDLRadar = (function () {
         console.error('状态更新失败:', err);
         showFormMessage('状态更新失败，请检查后端是否运行', 'error');
       });
+  }
+
+  function updateTaskDeadline(taskId, payload) {
+    fetch(API_BASE + '/api/tasks/' + encodeURIComponent(taskId), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function () {
+        showFormMessage('DDL更新成功', 'success');
+        loadTasks();
+      })
+      .catch(function (err) {
+        console.error('DDL更新失败:', err);
+        showFormMessage('DDL更新失败，请检查后端是否运行', 'error');
+      });
+  }
+
+  function toDatetimeLocal(str) {
+    return String(str).replace(' ', 'T');
+  }
+
+  function fromDatetimeLocal(str) {
+    return String(str).replace('T', ' ');
   }
 
   function renderTasks(tasks) {
@@ -215,6 +284,8 @@ var DDLRadar = (function () {
     var currentStatus = task.status || 'todo';
     var taskJson = JSON.stringify(task);
 
+    var deadlineLocal = toDatetimeLocal(task.deadline || '');
+
     var statusOptions = ''
       + '<option value="todo"' + (currentStatus === 'todo' ? ' selected' : '') + '>待办</option>'
       + '<option value="doing"' + (currentStatus === 'doing' ? ' selected' : '') + '>进行中</option>'
@@ -235,14 +306,18 @@ var DDLRadar = (function () {
       +       '<span>风险: ' + riskLevel + '</span>'
       +     '</div>'
       +   '</div>'
-      +   '<div style="flex-shrink:0;display:flex;align-items:center;gap:6px;">'
-      +     '<select class="select-status" data-task-id="' + escHtml(String(task.id)) + '"'
-      +     ' style="padding:3px 6px;font-size:12px;border:1px solid #dfe6e9;border-radius:3px;background:#fff;">'
-      +     statusOptions
-      +     '</select>'
-      +     '<button class="btn-delete" data-delete-id="' + escHtml(String(task.id)) + '"'
-      +     ' style="padding:4px 12px;font-size:12px;border:1px solid #d63031;'
-      +     'background:#fff;color:#d63031;border-radius:4px;cursor:pointer;">删除</button>'
+      +   '<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">'
+      +     '<input type="datetime-local" class="input-deadline" value="' + escAttr(deadlineLocal) + '"'
+      +     ' style="width:170px;padding:2px 4px;font-size:11px;border:1px solid #dfe6e9;border-radius:3px;background:#fff;">'
+      +     '<div style="display:flex;align-items:center;gap:6px;">'
+      +       '<select class="select-status" data-task-id="' + escHtml(String(task.id)) + '"'
+      +       ' style="padding:3px 6px;font-size:12px;border:1px solid #dfe6e9;border-radius:3px;background:#fff;">'
+      +       statusOptions
+      +       '</select>'
+      +       '<button class="btn-delete" data-delete-id="' + escHtml(String(task.id)) + '"'
+      +       ' style="padding:4px 12px;font-size:12px;border:1px solid #d63031;'
+      +       'background:#fff;color:#d63031;border-radius:4px;cursor:pointer;">删除</button>'
+      +     '</div>'
       +   '</div>'
       + '</div>';
   }

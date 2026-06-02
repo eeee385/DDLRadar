@@ -179,6 +179,11 @@ section + section {
   color: #fff;
 }
 
+.input-deadline:focus {
+  outline: none;
+  border-color: #0984e3;
+}
+
 .task-list-container {
   background: #fff;
   border-radius: 8px;
