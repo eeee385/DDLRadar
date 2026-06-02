@@ -26,6 +26,9 @@ var DDLRadar = (function () {
     dom.priority = document.getElementById('priority');
     dom.status = document.getElementById('status');
     dom.description = document.getElementById('description');
+    dom.formMessage = document.getElementById('form-message');
+
+    dom.taskForm.addEventListener('submit', handleFormSubmit);
 
     loadTasks();
   }
@@ -52,6 +55,55 @@ var DDLRadar = (function () {
         dom.taskList.innerHTML =
           '<p class="placeholder-text" style="color:#d63031;">任务列表加载失败，请检查后端是否运行</p>';
       });
+  }
+
+  function handleFormSubmit(e) {
+    e.preventDefault();
+
+    var titleVal = dom.title.value.trim();
+    if (!titleVal) {
+      showFormMessage('请输入任务标题', 'error');
+      return;
+    }
+
+    var deadlineVal = dom.deadline.value;
+    if (deadlineVal) {
+      deadlineVal = deadlineVal.replace('T', ' ');
+    }
+
+    var payload = {
+      title: titleVal,
+      course: dom.course.value.trim(),
+      task_type: dom.taskType.value,
+      deadline: deadlineVal,
+      priority: dom.priority.value,
+      status: dom.status.value,
+      description: dom.description.value.trim()
+    };
+
+    fetch(API_BASE + '/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function () {
+        showFormMessage('任务添加成功', 'success');
+        dom.taskForm.reset();
+        loadTasks();
+      })
+      .catch(function (err) {
+        console.error('任务添加失败:', err);
+        showFormMessage('任务添加失败，请检查后端是否运行', 'error');
+      });
+  }
+
+  function showFormMessage(msg, type) {
+    dom.formMessage.textContent = msg;
+    dom.formMessage.className = 'form-message form-message--' + type;
   }
 
   function renderTasks(tasks) {
