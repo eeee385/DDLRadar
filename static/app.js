@@ -33,6 +33,7 @@ var DDLRadar = (function () {
     dom.taskList.addEventListener('change', handleTaskListChange);
 
     loadTasks();
+    loadDashboard();
   }
 
   function loadTasks() {
@@ -57,6 +58,45 @@ var DDLRadar = (function () {
         dom.taskList.innerHTML =
           '<p class="placeholder-text" style="color:#d63031;">任务列表加载失败，请检查后端是否运行</p>';
       });
+  }
+
+  function loadDashboard() {
+    fetch(API_BASE + '/api/dashboard')
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function (json) {
+        var data;
+        if (json && json.success !== undefined && json.data !== undefined) {
+          data = json.data;
+        } else {
+          data = json;
+        }
+        updateDashboardCards(data);
+      })
+      .catch(function (err) {
+        console.error('Dashboard 加载失败:', err);
+      });
+  }
+
+  function updateDashboardCards(data) {
+    if (!data) return;
+
+    var total = data.total_tasks !== undefined ? data.total_tasks : '--';
+    var todo = data.todo_tasks !== undefined ? data.todo_tasks : '--';
+    var highRisk = data.high_risk_tasks !== undefined ? data.high_risk_tasks : '--';
+    var overdue = data.overdue_tasks !== undefined ? data.overdue_tasks : '--';
+
+    var totalEl = dom.statTotal.querySelector('.card-value');
+    var todoEl = dom.statTodo.querySelector('.card-value');
+    var highRiskEl = dom.statHighRisk.querySelector('.card-value');
+    var overdueEl = dom.statOverdue.querySelector('.card-value');
+
+    if (totalEl) totalEl.textContent = total;
+    if (todoEl) todoEl.textContent = todo;
+    if (highRiskEl) highRiskEl.textContent = highRisk;
+    if (overdueEl) overdueEl.textContent = overdue;
   }
 
   function handleFormSubmit(e) {
