@@ -144,8 +144,9 @@ var DDLRadar = (function () {
   }
 
   function borderColor(level) {
-    if (level === 'high') return '#d63031';
+    if (level === 'overdue' || level === 'high') return '#d63031';
     if (level === 'mid') return '#e17055';
+    if (level === 'completed') return '#b2bec3';
     return '#00b894';
   }
 
