@@ -22,8 +22,7 @@ pub async fn list_tasks(
     let tasks_with_risk: Vec<TaskWithRisk> = tasks
         .into_iter()
         .map(|task| {
-            let risk_info =
-                risk::calculate_risk(&task.deadline, &task.priority, &task.status, now);
+            let risk_info = risk::calculate_risk(&task.deadline, &task.priority, &task.status, now);
             TaskWithRisk {
                 task,
                 risk_level: risk_info.risk_level,
@@ -65,7 +64,10 @@ pub async fn update_task(
     })
     .await??;
 
-    Ok(Json(ApiResponse::success("Task updated successfully", task)))
+    Ok(Json(ApiResponse::success(
+        "Task updated successfully",
+        task,
+    )))
 }
 
 pub async fn delete_task(
@@ -83,9 +85,6 @@ pub async fn delete_task(
             "Task deleted successfully",
         )))
     } else {
-        Err(AppError::NotFound(format!(
-            "Task with id {} not found",
-            id
-        )))
+        Err(AppError::NotFound(format!("Task with id {} not found", id)))
     }
 }

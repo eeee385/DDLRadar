@@ -1,8 +1,8 @@
 mod mock;
 pub use mock::MockAiAdvisor;
 
-use serde::{Deserialize, Serialize};
 use crate::models::{Priority, Status, TaskType};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AiTaskInfo {
