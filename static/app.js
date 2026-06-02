@@ -29,6 +29,7 @@ var DDLRadar = (function () {
     dom.formMessage = document.getElementById('form-message');
 
     dom.taskForm.addEventListener('submit', handleFormSubmit);
+    dom.taskList.addEventListener('click', handleTaskListClick);
 
     loadTasks();
   }
@@ -106,6 +107,36 @@ var DDLRadar = (function () {
     dom.formMessage.className = 'form-message form-message--' + type;
   }
 
+  function handleTaskListClick(e) {
+    var btn = e.target.closest('.btn-delete');
+    if (!btn) return;
+
+    var taskId = btn.getAttribute('data-delete-id');
+    if (!taskId) return;
+
+    deleteTask(taskId);
+  }
+
+  function deleteTask(taskId) {
+    if (!confirm('确定要删除该任务吗？')) return;
+
+    fetch(API_BASE + '/api/tasks/' + encodeURIComponent(taskId), {
+      method: 'DELETE'
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function () {
+        showFormMessage('任务删除成功', 'success');
+        loadTasks();
+      })
+      .catch(function (err) {
+        console.error('任务删除失败:', err);
+        showFormMessage('任务删除失败，请检查后端是否运行', 'error');
+      });
+  }
+
   function renderTasks(tasks) {
     if (!tasks || tasks.length === 0) {
       dom.taskList.innerHTML = '<p class="placeholder-text">暂无任务数据，请先添加任务</p>';
@@ -130,16 +161,22 @@ var DDLRadar = (function () {
 
     return ''
       + '<div class="task-card" style="background:#fff;border-radius:6px;padding:12px 16px;margin-bottom:10px;'
-      + 'box-shadow:0 1px 3px rgba(0,0,0,0.08);border-left:4px solid ' + borderColor(riskLevel) + ';">'
-      +   '<div style="font-size:15px;font-weight:600;margin-bottom:6px;color:#2d3436;">' + title + '</div>'
-      +   '<div style="font-size:12px;color:#636e72;display:flex;flex-wrap:wrap;gap:4px 16px;">'
-      +     '<span>课程: ' + course + '</span>'
-      +     '<span>类型: ' + typeLabel + '</span>'
-      +     '<span>截止: ' + deadline + '</span>'
-      +     '<span>优先级: ' + priorityLabel + '</span>'
-      +     '<span>状态: ' + statusLabel + '</span>'
-      +     '<span>风险: ' + riskLevel + '</span>'
+      + 'box-shadow:0 1px 3px rgba(0,0,0,0.08);border-left:4px solid ' + borderColor(riskLevel) + ';'
+      + 'display:flex;justify-content:space-between;align-items:flex-start;">'
+      +   '<div>'
+      +     '<div style="font-size:15px;font-weight:600;margin-bottom:6px;color:#2d3436;">' + title + '</div>'
+      +     '<div style="font-size:12px;color:#636e72;display:flex;flex-wrap:wrap;gap:4px 16px;">'
+      +       '<span>课程: ' + course + '</span>'
+      +       '<span>类型: ' + typeLabel + '</span>'
+      +       '<span>截止: ' + deadline + '</span>'
+      +       '<span>优先级: ' + priorityLabel + '</span>'
+      +       '<span>状态: ' + statusLabel + '</span>'
+      +       '<span>风险: ' + riskLevel + '</span>'
+      +     '</div>'
       +   '</div>'
+      +   '<button class="btn-delete" data-delete-id="' + escHtml(String(task.id)) + '"'
+      +   ' style="flex-shrink:0;padding:4px 12px;font-size:12px;border:1px solid #d63031;'
+      +   'background:#fff;color:#d63031;border-radius:4px;cursor:pointer;">删除</button>'
       + '</div>';
   }
 
