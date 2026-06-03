@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DDLRadar - 学业DDL雷达</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <header class="header">
+    <h1 class="header-title">DDLRadar</h1>
+    <p class="header-subtitle">学业DDL雷达 - 智能任务管理</p>
+  </header>
+
+  <main class="main">
+
+    <section class="dashboard" id="dashboard">
+      <h2 class="section-title">Dashboard 数据看板</h2>
+      <div class="dashboard-grid">
+        <div class="dashboard-card" id="stat-total">
+          <span class="card-value">--</span>
+          <span class="card-label">总任务数</span>
+        </div>
+        <div class="dashboard-card" id="stat-todo">
+          <span class="card-value">--</span>
+          <span class="card-label">待办任务数</span>
+        </div>
+        <div class="dashboard-card dashboard-card--warning" id="stat-high-risk">
+          <span class="card-value">--</span>
+          <span class="card-label">高风险任务数</span>
+        </div>
+        <div class="dashboard-card dashboard-card--danger" id="stat-overdue">
+          <span class="card-value">--</span>
+          <span class="card-label">逾期任务数</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="task-form-section" id="task-form-section">
+      <h2 class="section-title">新增任务</h2>
+      <form class="task-form" id="task-form">
+        <div class="form-group">
+          <label for="title">任务标题</label>
+          <input type="text" id="title" name="title" placeholder="请输入任务标题" required>
+        </div>
+        <div class="form-group">
+          <label for="course">所属课程</label>
+          <input type="text" id="course" name="course" placeholder="请输入课程名称">
+        </div>
+        <div class="form-row">
+          <div class="form-group form-group--half">
+            <label for="task_type">任务类型</label>
+            <select id="task_type" name="task_type" required>
+              <option value="">请选择类型</option>
+              <option value="homework">作业</option>
+              <option value="exam">考试</option>
+              <option value="project">课程项目</option>
+              <option value="other">其他</option>
+            </select>
+          </div>
+          <div class="form-group form-group--half">
+            <label for="deadline">截止日期</label>
+            <input type="datetime-local" id="deadline" name="deadline" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group form-group--half">
+            <label for="priority">优先级</label>
+            <select id="priority" name="priority">
+              <option value="mid">中</option>
+              <option value="high">高</option>
+              <option value="low">低</option>
+            </select>
+          </div>
+          <div class="form-group form-group--half">
+            <label for="status">状态</label>
+            <select id="status" name="status">
+              <option value="todo">待办</option>
+              <option value="doing">进行中</option>
+              <option value="done">已完成</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="description">任务描述</label>
+          <textarea id="description" name="description" rows="3" placeholder="请输入任务详情描述"></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">添加任务</button>
+          <span class="form-message" id="form-message"></span>
+        </div>
+      </form>
+    </section>
+
+    <section class="task-list-section" id="task-list-section">
+      <h2 class="section-title">任务列表</h2>
+      <div class="task-list-container" id="task-list">
+        <p class="placeholder-text">暂无任务数据，请先添加任务</p>
+      </div>
+    </section>
+
+    <section class="ai-section" id="ai-section">
+      <h2 class="section-title">AI 建议</h2>
+      <div class="ai-container" id="ai-suggestion">
+        <div class="ai-empty" id="ai-empty">
+          <p class="placeholder-text">暂无任务，请先添加任务后再获取 AI 建议</p>
+        </div>
+        <form class="ai-form" id="ai-form" style="display:none;">
+          <div class="form-group">
+            <label for="ai-task-select">选择任务</label>
+            <select id="ai-task-select" name="ai-task-select">
+              <option value="">请选择要分析的任务</option>
+            </select>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">获取 AI 建议</button>
+            <span class="form-message" id="ai-message"></span>
+          </div>
+        </form>
+        <div class="ai-result" id="ai-result" style="display:none;"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <p>DDLRadar &copy; 2026</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
