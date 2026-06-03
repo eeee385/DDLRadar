@@ -3,6 +3,7 @@ var DDLRadar = (function () {
 
   var API_BASE = 'http://127.0.0.1:3000';
   var dom = {};
+  var tasksCache = [];
 
   var TYPE_LABEL = { homework: '作业', exam: '考试', project: '课程项目', other: '其他' };
   var PRIORITY_LABEL = { high: '高', mid: '中', low: '低' };
@@ -27,8 +28,14 @@ var DDLRadar = (function () {
     dom.status = document.getElementById('status');
     dom.description = document.getElementById('description');
     dom.formMessage = document.getElementById('form-message');
+    dom.aiForm = document.getElementById('ai-form');
+    dom.aiTaskSelect = document.getElementById('ai-task-select');
+    dom.aiMessage = document.getElementById('ai-message');
+    dom.aiResult = document.getElementById('ai-result');
+    dom.aiEmpty = document.getElementById('ai-empty');
 
     dom.taskForm.addEventListener('submit', handleFormSubmit);
+    dom.aiForm.addEventListener('submit', handleAiSubmit);
     dom.taskList.addEventListener('click', handleTaskListClick);
     dom.taskList.addEventListener('change', handleTaskListChange);
 
@@ -51,12 +58,16 @@ var DDLRadar = (function () {
         } else {
           throw new Error('未知响应格式');
         }
+        tasksCache = tasks;
         renderTasks(tasks);
+        updateAiTaskSelect(tasks);
       })
       .catch(function (err) {
         console.error('任务列表加载失败:', err);
+        tasksCache = [];
         dom.taskList.innerHTML =
           '<p class="placeholder-text" style="color:#d63031;">任务列表加载失败，请检查后端是否运行</p>';
+        updateAiTaskSelect([]);
       });
   }
 
@@ -78,6 +89,120 @@ var DDLRadar = (function () {
       .catch(function (err) {
         console.error('Dashboard 加载失败:', err);
       });
+  }
+
+  function updateAiTaskSelect(tasks) {
+    if (!tasks || tasks.length === 0) {
+      dom.aiForm.style.display = 'none';
+      dom.aiEmpty.style.display = 'block';
+      dom.aiResult.style.display = 'none';
+      return;
+    }
+
+    dom.aiForm.style.display = 'block';
+    dom.aiEmpty.style.display = 'none';
+
+    var html = '<option value="">请选择要分析的任务</option>';
+    tasks.forEach(function (task) {
+      html += '<option value="' + escAttr(String(task.id)) + '">' + escHtml(task.title || '') + '</option>';
+    });
+    dom.aiTaskSelect.innerHTML = html;
+  }
+
+  function handleAiSubmit(e) {
+    e.preventDefault();
+
+    var taskId = dom.aiTaskSelect.value;
+    if (!taskId) {
+      showAiMessage('请先选择一个任务', 'error');
+      return;
+    }
+
+    var task = null;
+    for (var i = 0; i < tasksCache.length; i++) {
+      if (String(tasksCache[i].id) === String(taskId)) {
+        task = tasksCache[i];
+        break;
+      }
+    }
+
+    if (!task) {
+      showAiMessage('未找到所选任务', 'error');
+      return;
+    }
+
+    var payload = {
+      title: task.title || '',
+      course: task.course || '',
+      task_type: task.task_type || '',
+      deadline: task.deadline || '',
+      priority: task.priority || 'mid',
+      status: task.status || 'todo',
+      description: task.description || ''
+    };
+
+    showAiMessage('正在获取 AI 建议...', '');
+
+    fetch(API_BASE + '/api/ai/suggest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(function (res) {
+        if (!res.ok) {
+          return res.text().then(function (body) {
+            var detail = body;
+            try {
+              var parsed = JSON.parse(body);
+              detail = parsed.message || body;
+            } catch (_) {}
+            throw new Error('HTTP ' + res.status + ': ' + detail);
+          });
+        }
+        return res.json();
+      })
+      .then(function (json) {
+        var advice = extractAdvice(json);
+        if (advice) {
+          showAiMessage('', '');
+          dom.aiResult.style.display = 'block';
+          dom.aiResult.className = 'ai-result';
+          dom.aiResult.innerHTML = escHtml(advice);
+        } else {
+          showAiMessage('未能获取到建议内容', 'error');
+        }
+      })
+      .catch(function (err) {
+        console.error('AI 建议获取失败:', err.message || err);
+        var msg = err.message || 'AI 建议获取失败，请稍后重试';
+        showAiMessage(msg, 'error');
+        dom.aiResult.style.display = 'block';
+        dom.aiResult.className = 'ai-result ai-result--error';
+        dom.aiResult.innerHTML = escHtml(msg);
+      });
+  }
+
+  function extractAdvice(json) {
+    if (typeof json === 'string') return json;
+
+    if (json && json.advice !== undefined) return json.advice;
+
+    if (json && json.success !== undefined) {
+      if (json.data) {
+        if (typeof json.data === 'string') return json.data;
+        if (json.data.advice !== undefined) return json.data.advice;
+      }
+      if (json.message && typeof json.message === 'string' && json.message.length > 10) {
+        return json.message;
+      }
+    }
+
+    return null;
+  }
+
+  function showAiMessage(msg, type) {
+    dom.aiMessage.textContent = msg;
+    dom.aiMessage.className = 'form-message' + (type ? ' form-message--' + type : '');
   }
 
   function updateDashboardCards(data) {

@@ -200,6 +200,28 @@ section + section {
   min-height: 80px;
 }
 
+.ai-form {
+  margin-bottom: 16px;
+}
+
+.ai-result {
+  margin-top: 16px;
+  padding: 14px;
+  background: #f8f9fc;
+  border-radius: 6px;
+  border: 1px solid #dfe6e9;
+  font-size: 14px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  color: #2d3436;
+}
+
+.ai-result--error {
+  color: #d63031;
+  border-color: #fab1a0;
+  background: #ffeaa7;
+}
+
 .placeholder-text {
   color: #b2bec3;
   font-size: 14px;

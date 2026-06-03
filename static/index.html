@@ -103,7 +103,22 @@
     <section class="ai-section" id="ai-section">
       <h2 class="section-title">AI 建议</h2>
       <div class="ai-container" id="ai-suggestion">
-        <p class="placeholder-text">选择任务后可查看 AI 拆解建议</p>
+        <div class="ai-empty" id="ai-empty">
+          <p class="placeholder-text">暂无任务，请先添加任务后再获取 AI 建议</p>
+        </div>
+        <form class="ai-form" id="ai-form" style="display:none;">
+          <div class="form-group">
+            <label for="ai-task-select">选择任务</label>
+            <select id="ai-task-select" name="ai-task-select">
+              <option value="">请选择要分析的任务</option>
+            </select>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">获取 AI 建议</button>
+            <span class="form-message" id="ai-message"></span>
+          </div>
+        </form>
+        <div class="ai-result" id="ai-result" style="display:none;"></div>
       </div>
     </section>
 
