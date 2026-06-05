@@ -235,6 +235,5 @@ fn status_str(val: &Status) -> &'static str {
         Status::Todo => "todo",
         Status::Doing => "doing",
         Status::Done => "done",
-        _ => "overdue",
     }
 }

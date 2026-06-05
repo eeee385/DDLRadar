@@ -15,7 +15,7 @@ impl AiAdvisor for MockAiAdvisor {
         let now_str = now_string();
 
         // 如果已完成
-        if status == Status::Done {
+        if status == Status::Done  {
             return Ok(format!(
                 "「{}」已完成！做得好！建议回顾一下学习笔记，巩固知识点。\n\n{}",
                 task_info.title,
@@ -24,7 +24,8 @@ impl AiAdvisor for MockAiAdvisor {
         }
 
         // 如果已逾期
-        if status == Status::Overdue {
+        let tim=estimate_available_days(&task_info.deadline);
+        if tim < 0 { 
             return Ok(format!(
                 "「{}」已逾期。建议尽快与老师沟通，看是否可以补交。同时反思逾期原因，避免再次发生。\n\n{}",
                 task_info.title,
@@ -96,8 +97,8 @@ impl AiAdvisor for MockAiAdvisor {
         
         for (i,task) in tasks.iter().enumerate(){
             let risk_emoji=match task.risk_level.as_str() {
-                "High" | "Overdue" => "🔴",
-                "Medium" => "🟡",
+                "高风险" | "已逾期" => "🔴",
+                "中风险" => "🟡",
                 _ => "🟢",
             };
             let priority_note = match task.task.priority {
@@ -123,7 +124,7 @@ impl AiAdvisor for MockAiAdvisor {
                 priority_note,
             ));
         }
-        let high_count=tasks.iter().filter(|t| t.risk_level == "high" || t.risk_level == "overdue").count();
+        let high_count=tasks.iter().filter(|t| t.risk_level == "高风险" || t.risk_level == "已逾期").count();
         if high_count > 0 {
             summary.push_str(&format!(
                 "⚠️ 提示：本周有 {} 个高风险/逾期任务，建议优先处理！\n\n",
