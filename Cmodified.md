@@ -16,3 +16,10 @@
 - 删除了db.rs的status_str方法中新增对于Overdue的处理
 - 修改了estimate_available_days方法，现在它在发现逾期时会返回-1
 - 修改了mock风格建议对于逾期事件的处理方式
+
+### 2026/6/5 16:57
+- ai/mod.rs 修改了函数参数以及其相关实现
+- 新增对于mock的单元测试，测试对象为generate_weekly_summary
+- handlers/ai.rs 同步修改了相关的函数参数
+- 实现了 llm.rs，并添加若干单元测试
+- cargo add ureq 

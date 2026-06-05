@@ -1,5 +1,7 @@
 mod mock;
+mod llm;
 pub use mock::MockAiAdvisor;
+pub use llm::LLMAiAdvisor;
 
 use crate::models::{Priority, Status, TaskType};
 use serde::{Deserialize, Serialize};
@@ -19,7 +21,19 @@ pub struct AiTaskInfo {
 pub struct AiError(pub String);
 
 pub trait AiAdvisor: Send + Sync {
-    fn generate_advice(&self, task_info: &AiTaskInfo) -> Result<String, AiError>;
-    fn generate_weekly_summary(&self,tasks: &[crate::models::TaskWithRisk]) -> Result<String, AiError>;
-    fn generate_exam_advice(&self,task_info: &AiTaskInfo, days: usize, priority_note: &str) -> String;
+    fn generate_advice(
+        &self,
+        _api_key: &str,
+        _api_base: &str,
+        _0model: &str,
+        task_info: &AiTaskInfo
+    ) -> Result<String, AiError>;
+
+    fn generate_weekly_summary(
+        &self,
+        _api_key: &str,
+        _api_base: &str,
+        _model: &str,
+        tasks: &[crate::models::TaskWithRisk]
+    ) -> Result<String, AiError>;
 }

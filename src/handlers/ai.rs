@@ -12,7 +12,7 @@ pub async fn ai_suggest(
 ) -> Result<Json<ApiResponse<AiSuggestResponse>>, AppError> {
     let advice = state
         .ai_advisor
-        .generate_advice(&task_info)
+        .generate_advice(" "," "," ",&task_info)
         .map_err(|e| AppError::Internal(format!("AI error: {}", e.0)))?;
 
     Ok(Json(ApiResponse::success(

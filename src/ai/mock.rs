@@ -1,13 +1,59 @@
 use super::{AiAdvisor, AiError, AiTaskInfo};
 // use super::now_string;
 use crate::utils::{now_string,estimate_available_days};
-use crate::models::{TaskType,Status,Priority,TaskWithRisk};
+use crate::models::{TaskType,Status,Priority,TaskWithRisk,Task};
 pub struct MockAiAdvisor;
 
 // 这是一个mock风格的模板化建议
 
+fn generate_exam_advice(task_info: &AiTaskInfo, days: usize, priority_note: &str) -> String {
+    let plan = match days {
+        0..=1 => format!(
+            "⚠️ 时间紧迫！仅剩 {} 天，建议：\n\
+            📖 快速浏览核心考点和公式\n\
+            📖 做几道重点题型熟悉思路\n\
+            📖 保持冷静，调整心态\n\
+            📖 确保休息充足，以最佳状态应考",
+            days
+        ),
+        2..=3 => format!(
+            "⏰ 时间较紧，剩余 {} 天，建议：\n\
+            📖 第 1 天：梳理重点知识框架 + 做典型例题\n\
+            📖 第 2 天：查漏补缺，模拟练习\n\
+            📖 如有第 3 天：回顾错题，调整心态",
+            days
+        ),
+        4..=7 => format!(
+            "📚 剩余 {} 天，建议分阶段复习：\n\
+            📖 第 1~2 天：梳理知识框架，整理重点\n\
+            📖 第 3~4 天：做典型例题和往年试题\n\
+            📖 第 5~6 天：模拟练习 + 查漏补缺\n\
+            📖 第 7 天：最后浏览，调整心态",
+            days
+        ),
+        _ => format!(
+            "📚 时间充裕，剩余 {} 天，建议系统复习：\n\
+            📖 前期：梳理知识框架，整理重点和公式\n\
+            📖 中期：分模块做例题，攻克薄弱环节\n\
+            📖 后期：模拟练习 + 限时训练\n\
+            📖 考前 1~2 天：回顾错题，调整心态",
+            days
+        ),
+    };
+    format!(
+        "📚 复习计划建议：「{}」\n\n{}\n\n{}\n\n💡 提示：距离考试约 {} 天，请根据自身情况灵活调整复习节奏。\n\n📅 考试时间：{}",
+        task_info.title, priority_note, plan, days, task_info.deadline
+    )
+}
+
 impl AiAdvisor for MockAiAdvisor {
-    fn generate_advice(&self, task_info: &AiTaskInfo) -> Result<String, AiError> {
+    fn generate_advice(
+        &self,
+        _api_key: &str,
+        _api_base: &str,
+        _model: &str, 
+        task_info: &AiTaskInfo
+    ) -> Result<String, AiError> {
         let task_type=task_info.task_type.clone();
         let status=task_info.status.clone();
         let priority=task_info.priority.clone();
@@ -58,7 +104,7 @@ impl AiAdvisor for MockAiAdvisor {
             TaskType::Exam => {
                 let days = estimate_available_days(&task_info.deadline);
                 let days = days.max(1) as usize;
-                Ok(format!("{}\n\n{}", self.generate_exam_advice(task_info, days, priority_note), now_str))
+                Ok(format!("{}\n\n{}", generate_exam_advice(task_info, days, priority_note), now_str))
             }
             TaskType::Homework => {
                 Ok(format!(
@@ -83,7 +129,13 @@ impl AiAdvisor for MockAiAdvisor {
             }
         }
     }
-    fn generate_weekly_summary(&self,tasks: &[crate::models::TaskWithRisk]) -> Result<String, AiError> {
+    fn generate_weekly_summary(
+        &self,
+        _api_key: &str,
+        _api_base: &str,
+        _model: &str,
+        tasks: &[crate::models::TaskWithRisk]
+    ) -> Result<String, AiError> {
         let now_str=now_string();
         
         if tasks.is_empty(){
@@ -137,46 +189,6 @@ impl AiAdvisor for MockAiAdvisor {
         summary.push_str(&now_str);
         Ok(summary)
     }
-
-    fn generate_exam_advice(&self,task_info: &AiTaskInfo, days: usize, priority_note: &str) -> String {
-        let plan = match days {
-            0..=1 => format!(
-                "⚠️ 时间紧迫！仅剩 {} 天，建议：\n\
-                📖 快速浏览核心考点和公式\n\
-                📖 做几道重点题型熟悉思路\n\
-                📖 保持冷静，调整心态\n\
-                📖 确保休息充足，以最佳状态应考",
-                days
-            ),
-            2..=3 => format!(
-                "⏰ 时间较紧，剩余 {} 天，建议：\n\
-                📖 第 1 天：梳理重点知识框架 + 做典型例题\n\
-                📖 第 2 天：查漏补缺，模拟练习\n\
-                📖 如有第 3 天：回顾错题，调整心态",
-                days
-            ),
-            4..=7 => format!(
-                "📚 剩余 {} 天，建议分阶段复习：\n\
-                📖 第 1~2 天：梳理知识框架，整理重点\n\
-                📖 第 3~4 天：做典型例题和往年试题\n\
-                📖 第 5~6 天：模拟练习 + 查漏补缺\n\
-                📖 第 7 天：最后浏览，调整心态",
-                days
-            ),
-            _ => format!(
-                "📚 时间充裕，剩余 {} 天，建议系统复习：\n\
-                📖 前期：梳理知识框架，整理重点和公式\n\
-                📖 中期：分模块做例题，攻克薄弱环节\n\
-                📖 后期：模拟练习 + 限时训练\n\
-                📖 考前 1~2 天：回顾错题，调整心态",
-                days
-            ),
-        };
-        format!(
-            "📚 复习计划建议：「{}」\n\n{}\n\n{}\n\n💡 提示：距离考试约 {} 天，请根据自身情况灵活调整复习节奏。\n\n📅 考试时间：{}",
-            task_info.title, priority_note, plan, days, task_info.deadline
-        )
-    }
 }
 
 #[cfg(test)]
@@ -195,7 +207,7 @@ mod tests {
             status: Status::Todo,
             description: "".to_string(),
         };
-        let result = mock.generate_advice(&task_info);
+        let result = mock.generate_advice(" "," "," ",&task_info);
         match result {
             Ok(advice) => {
                 println!("{}",advice);
@@ -222,7 +234,7 @@ mod tests {
             status: Status::Todo,
             description: "".to_string(),
         };
-        let result = mock.generate_advice(&task_info);
+        let result = mock.generate_advice(" "," "," ",&task_info);
         match result {
             Ok(advice) => {
                 println!("{}",advice);
@@ -248,7 +260,7 @@ mod tests {
             status: Status::Todo,
             description: "".to_string(),
         };
-        let result = mock.generate_advice(&task_info);
+        let result = mock.generate_advice(" "," "," ",&task_info);
         match result {
             Ok(advice) => {
                 println!("{}",advice);
@@ -268,5 +280,57 @@ mod tests {
         let deadline = future.format("%Y-%m-%d %H:%M").to_string();
         let days = estimate_available_days(&deadline);
         assert!(days >= 4 && days <= 6);
+    }
+    #[test]
+    fn test_generate_weekly_summary(){
+        let mock=MockAiAdvisor{};
+        let tasks = vec![
+            crate::models::TaskWithRisk {
+                task: 
+                Task {
+                    id: 0,
+                    title: "高风险任务".to_string(),
+                    course: "课程A".to_string(),
+                    task_type: TaskType::Homework,
+                    deadline: "2026-06-20 23:59".to_string(),
+                    priority: Priority::High,
+                    status: Status::Todo,
+                    description: "".to_string(),
+                    created_at: "".to_string(),
+                    updated_at: "".to_string(),
+                },
+                risk_level: "高风险".to_string(),
+                is_overdue: false,
+            },
+            crate::models::TaskWithRisk {
+                task: Task {
+                    id: 1,
+                    title: "中风险任务".to_string(),
+                    course: "课程B".to_string(),
+                    task_type: TaskType::Exam,
+                    deadline: "2026-06-22 09:00".to_string(),
+                    priority: Priority::Mid,
+                    status: Status::Todo,
+                    description: "".to_string(),
+                    created_at: "".to_string(),
+                    updated_at: "".to_string(),
+                },
+                risk_level: "中风险".to_string(),
+                is_overdue: false,
+            },
+        ];
+        let result = mock.generate_weekly_summary(" "," "," ",&tasks);
+        match result {
+            Ok(summary) => {
+                println!("{}",summary);
+                assert!(summary.contains("本周 DDL 总结"));
+                assert!(summary.contains("高风险任务"));
+                assert!(summary.contains("中风险任务"));
+            }
+            Err(error) => {
+                eprintln!("获取总结失败：{:?}", error);
+                std::process::exit(1);
+            }
+        }
     }
 }
