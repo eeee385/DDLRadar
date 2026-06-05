@@ -25,6 +25,7 @@ pub enum Status {
     Todo,
     Doing,
     Done,
+    Overdue,
 }
 
 // --- DB Entity ---

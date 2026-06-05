@@ -20,4 +20,6 @@ pub struct AiError(pub String);
 
 pub trait AiAdvisor: Send + Sync {
     fn generate_advice(&self, task_info: &AiTaskInfo) -> Result<String, AiError>;
+    fn generate_weekly_summary(&self,tasks: &[crate::models::TaskWithRisk]) -> Result<String, AiError>;
+    fn generate_exam_advice(&self,task_info: &AiTaskInfo, days: usize, priority_note: &str) -> String;
 }
