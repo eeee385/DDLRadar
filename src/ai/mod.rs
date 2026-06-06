@@ -25,7 +25,7 @@ pub trait AiAdvisor: Send + Sync {
         &self,
         _api_key: &str,
         _api_base: &str,
-        _0model: &str,
+        _model: &str,
         task_info: &AiTaskInfo
     ) -> Result<String, AiError>;
 

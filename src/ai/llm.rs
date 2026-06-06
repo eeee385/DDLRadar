@@ -5,7 +5,8 @@ use crate::models::{TaskType,Status,Priority,TaskWithRisk,Task};
 pub struct LLMAiAdvisor;
 use serde_json::json;
 
-// 这是一个mock风格的模板化建议
+// 这是一个真实AI的建议
+
 fn build_llm_prompt(task_info: &AiTaskInfo) -> String {
     let type_label = match task_info.task_type {
         TaskType::Homework => "作业",
