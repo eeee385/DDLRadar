@@ -49,9 +49,6 @@ fn generate_exam_advice(task_info: &AiTaskInfo, days: usize, priority_note: &str
 impl AiAdvisor for MockAiAdvisor {
     fn generate_advice(
         &self,
-        _api_key: &str,
-        _api_base: &str,
-        _model: &str, 
         task_info: &AiTaskInfo
     ) -> Result<String, AiError> {
         let task_type=task_info.task_type.clone();
@@ -131,9 +128,6 @@ impl AiAdvisor for MockAiAdvisor {
     }
     fn generate_weekly_summary(
         &self,
-        _api_key: &str,
-        _api_base: &str,
-        _model: &str,
         tasks: &[crate::models::TaskWithRisk]
     ) -> Result<String, AiError> {
         let now_str=now_string();
@@ -207,7 +201,7 @@ mod tests {
             status: Status::Todo,
             description: "".to_string(),
         };
-        let result = mock.generate_advice(" "," "," ",&task_info);
+        let result = mock.generate_advice(&task_info);
         match result {
             Ok(advice) => {
                 println!("{}",advice);
@@ -234,7 +228,7 @@ mod tests {
             status: Status::Todo,
             description: "".to_string(),
         };
-        let result = mock.generate_advice(" "," "," ",&task_info);
+        let result = mock.generate_advice(&task_info);
         match result {
             Ok(advice) => {
                 println!("{}",advice);
@@ -260,7 +254,7 @@ mod tests {
             status: Status::Todo,
             description: "".to_string(),
         };
-        let result = mock.generate_advice(" "," "," ",&task_info);
+        let result = mock.generate_advice(&task_info);
         match result {
             Ok(advice) => {
                 println!("{}",advice);
@@ -319,7 +313,7 @@ mod tests {
                 is_overdue: false,
             },
         ];
-        let result = mock.generate_weekly_summary(" "," "," ",&tasks);
+        let result = mock.generate_weekly_summary(&tasks);
         match result {
             Ok(summary) => {
                 println!("{}",summary);

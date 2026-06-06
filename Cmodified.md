@@ -23,3 +23,9 @@
 - handlers/ai.rs 同步修改了相关的函数参数
 - 实现了 llm.rs，并添加若干单元测试
 - cargo add ureq 
+
+### 2026/6/6 22:19
+- 调整了ai模块的实现，将LLM相关的llm_api、llm_base、model嵌入到LLMAiAdvisor内部，并对llm_api做了加密处理，删除了函数签名中的api等字段。
+- 修改了handlers中对于ai的接口调用方式，新的调用方式实现了LLM建议、周总结、LLM转MOCK等功能。
+- 在state.rs中添加了llm字段。
+- 在main.rs中添加了对于llm的初始设置。

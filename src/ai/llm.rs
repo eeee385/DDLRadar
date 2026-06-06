@@ -2,8 +2,31 @@ use super::{AiAdvisor, AiError, AiTaskInfo};
 // use super::now_string;
 use crate::utils::{now_string,estimate_available_days};
 use crate::models::{TaskType,Status,Priority,TaskWithRisk,Task};
-pub struct LLMAiAdvisor;
+use secrecy::{ExposeSecret, SecretString};
 use serde_json::json;
+
+/// LLM API 配置 — API Key 由 SecretString 包裹，Debug 时不打印，Drop 时自动零化内存
+#[derive(Clone)]
+pub struct LLMConfig {
+    pub api_key: SecretString,
+    pub api_base: String,
+    pub model: String,
+}
+
+pub struct LLMAiAdvisor {
+    config: Option<LLMConfig>,
+}
+
+impl LLMAiAdvisor {
+    pub fn new(config: Option<LLMConfig>) -> Self {
+        Self { config }
+    }
+
+    /// 是否已配置 LLM，用于 handler 判断走 LLM 还是降级 Mock
+    pub fn is_configured(&self) -> bool {
+        self.config.is_some()
+    }
+}
 
 // 这是一个真实AI的建议
 
@@ -62,17 +85,18 @@ fn build_llm_prompt(task_info: &AiTaskInfo) -> String {
 impl AiAdvisor for LLMAiAdvisor {
     fn generate_advice(
         &self,
-        _api_key: &str,
-        _api_base: &str,
-        _model: &str,
         task_info: &AiTaskInfo,
     ) -> Result<String, AiError> {
+        let config = self.config.as_ref()
+            .ok_or_else(|| AiError("LLM 未配置".to_string()))?;
+        let api_key = config.api_key.expose_secret();
+
         let prompt = build_llm_prompt(task_info);
         
-        let url = format!("{}/chat/completions", _api_base.trim_end_matches('/'));
+        let url = format!("{}/chat/completions", config.api_base.trim_end_matches('/'));
 
         let body = json!({
-            "model": _model,
+            "model": config.model,
             "messages": [
                 {
                     "role": "system",
@@ -88,7 +112,7 @@ impl AiAdvisor for LLMAiAdvisor {
         });
 
         let response = ureq::post(&url)
-            .set("Authorization", &format!("Bearer {}", _api_key))
+            .set("Authorization", &format!("Bearer {}", api_key))
             .set("Content-Type", "application/json")
             .timeout(std::time::Duration::from_secs(30))
             .send_string(&body.to_string())
@@ -110,14 +134,15 @@ impl AiAdvisor for LLMAiAdvisor {
     }
     fn generate_weekly_summary(
         &self,
-        _api_key: &str,
-        _api_base: &str,
-        _model: &str,
         tasks: &[crate::models::TaskWithRisk],
     ) -> Result<String, AiError> {
         if tasks.is_empty() {
             return Ok("🎉 未来 7 天内没有截止的任务，可以稍微放松一下！".to_string());
         }
+        let config = self.config.as_ref()
+            .ok_or_else(|| AiError("LLM 未配置".to_string()))?;
+        let api_key = config.api_key.expose_secret();
+
         // 构建任务列表文本
         let mut task_list = String::new();
         for (i, task) in tasks.iter().enumerate() {
@@ -158,10 +183,10 @@ impl AiAdvisor for LLMAiAdvisor {
             task_list
         );
 
-        let url = format!("{}/chat/completions", _api_base.trim_end_matches('/'));
+        let url = format!("{}/chat/completions", config.api_base.trim_end_matches('/'));
 
         let body = json!({
-            "model": _model,
+            "model": config.model,
             "messages": [
                 {
                     "role": "system",
@@ -177,7 +202,7 @@ impl AiAdvisor for LLMAiAdvisor {
         });
 
         let response = ureq::post(&url)
-            .set("Authorization", &format!("Bearer {}", _api_key))
+            .set("Authorization", &format!("Bearer {}", api_key))
             .set("Content-Type", "application/json")
             .timeout(std::time::Duration::from_secs(30))
             .send_string(&body.to_string())
@@ -228,9 +253,9 @@ mod test {
 
     #[test]
     fn generate_weekly_summary_returns_empty_message_for_no_tasks() {
-        let advisor = LLMAiAdvisor;
+        let advisor = LLMAiAdvisor::new(None);
 
-        let result = advisor.generate_weekly_summary("", "", "", &[]);
+        let result = advisor.generate_weekly_summary(&[]);
         assert!(result.is_ok());
         match result {
             Ok(advice) => {
@@ -260,8 +285,12 @@ mod test {
     //         description: "设计一个学生选课系统的ER图和数据库表结构".to_string(),
     //     };
 
-    //     let advisor = LLMAiAdvisor;
-    //     let result = advisor.generate_advice(&api_key, &api_base, &model, &task_info);
+    //     let advisor = LLMAiAdvisor::new(Some(LLMConfig {
+    //         api_key: SecretString::from(api_key),
+    //         api_base,
+    //         model,
+    //     }));
+    //     let result = advisor.generate_advice(&task_info);
 
     //     match result {
     //         Ok(advice) => {
@@ -316,8 +345,12 @@ mod test {
     //         },
     //     ];
 
-    //     let advisor = LLMAiAdvisor;
-    //     let result = advisor.generate_weekly_summary(&api_key, &api_base, &model, &tasks);
+    //     let advisor = LLMAiAdvisor::new(Some(LLMConfig {
+    //         api_key: SecretString::from(api_key),
+    //         api_base,
+    //         model,
+    //     }));
+    //     let result = advisor.generate_weekly_summary(&tasks);
 
     //     match result {
     //         Ok(summary) => {
