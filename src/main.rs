@@ -68,6 +68,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/dashboard", get(handlers::dashboard::dashboard))
         .route("/api/ai/suggest", post(handlers::ai::ai_suggest))
         .route("/api/ai/weekly", post(handlers::ai::weekly_summary))
+        .route(
+            "/api/config",
+            get(handlers::config::get_config).post(handlers::config::update_config),
+        )
         .layer(cors)
         .with_state(state);
 

@@ -1,9 +1,10 @@
 use super::{AiAdvisor, AiError, AiTaskInfo};
 // use super::now_string;
-use crate::utils::{now_string,estimate_available_days};
-use crate::models::{TaskType,Status,Priority,TaskWithRisk,Task};
+use crate::utils::estimate_available_days;
+use crate::models::{TaskType,Status,Priority};
 use secrecy::{ExposeSecret, SecretString};
 use serde_json::json;
+use std::sync::Mutex;
 
 /// LLM API 配置 — API Key 由 SecretString 包裹，Debug 时不打印，Drop 时自动零化内存
 #[derive(Clone)]
@@ -14,17 +15,29 @@ pub struct LLMConfig {
 }
 
 pub struct LLMAiAdvisor {
-    config: Option<LLMConfig>,
+    config: Mutex<Option<LLMConfig>>,
 }
 
 impl LLMAiAdvisor {
     pub fn new(config: Option<LLMConfig>) -> Self {
-        Self { config }
+        Self { config: Mutex::new(config) }
     }
 
     /// 是否已配置 LLM，用于 handler 判断走 LLM 还是降级 Mock
     pub fn is_configured(&self) -> bool {
-        self.config.is_some()
+        self.config.lock().unwrap().is_some()
+    }
+
+    /// 运行时替换配置（用于前端设置 API Key）
+    pub fn update_config(&self, new_config: Option<LLMConfig>) {
+        *self.config.lock().unwrap() = new_config;
+    }
+
+    /// 返回当前配置信息（不含 API Key），用于前端展示状态
+    pub fn config_info(&self) -> Option<(String, String)> {
+        self.config.lock().unwrap().as_ref().map(|c| {
+            (c.api_base.clone(), c.model.clone())
+        })
     }
 }
 
@@ -87,7 +100,8 @@ impl AiAdvisor for LLMAiAdvisor {
         &self,
         task_info: &AiTaskInfo,
     ) -> Result<String, AiError> {
-        let config = self.config.as_ref()
+        let guard = self.config.lock().unwrap();
+        let config = guard.as_ref()
             .ok_or_else(|| AiError("LLM 未配置".to_string()))?;
         let api_key = config.api_key.expose_secret();
 
@@ -139,7 +153,8 @@ impl AiAdvisor for LLMAiAdvisor {
         if tasks.is_empty() {
             return Ok("🎉 未来 7 天内没有截止的任务，可以稍微放松一下！".to_string());
         }
-        let config = self.config.as_ref()
+        let guard = self.config.lock().unwrap();
+        let config = guard.as_ref()
             .ok_or_else(|| AiError("LLM 未配置".to_string()))?;
         let api_key = config.api_key.expose_secret();
 

@@ -160,7 +160,7 @@ impl AiAdvisor for MockAiAdvisor {
                  
             };
             summary.push_str(&format!(
-                "{}. {} {}「{}」- {}\n   截止：{} | 优先级：{}\n\n",
+                "{}. {} {}「{}」- {} | 截止：{} | 优先级：{}\n",
                 i + 1,
                 risk_emoji,
                 type_note,

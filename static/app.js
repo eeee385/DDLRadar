@@ -33,14 +33,27 @@ var DDLRadar = (function () {
     dom.aiMessage = document.getElementById('ai-message');
     dom.aiResult = document.getElementById('ai-result');
     dom.aiEmpty = document.getElementById('ai-empty');
+    dom.btnWeeklySummary = document.getElementById('btn-weekly-summary');
+    dom.aiWeeklyMessage = document.getElementById('ai-weekly-message');
+    dom.cfgLabel = document.getElementById('cfg-label');
+    dom.cfgApiKey = document.getElementById('cfg-api-key');
+    dom.cfgApiBase = document.getElementById('cfg-api-base');
+    dom.cfgModel = document.getElementById('cfg-model');
+    dom.cfgMessage = document.getElementById('cfg-message');
+    dom.btnSaveConfig = document.getElementById('btn-save-config');
+    dom.btnResetConfig = document.getElementById('btn-reset-config');
 
     dom.taskForm.addEventListener('submit', handleFormSubmit);
     dom.aiForm.addEventListener('submit', handleAiSubmit);
     dom.taskList.addEventListener('click', handleTaskListClick);
     dom.taskList.addEventListener('change', handleTaskListChange);
+    dom.btnWeeklySummary.addEventListener('click', handleWeeklySummary);
+    dom.btnSaveConfig.addEventListener('click', handleSaveConfig);
+    dom.btnResetConfig.addEventListener('click', handleResetConfig);
 
     loadTasks();
     loadDashboard();
+    loadConfig();
   }
 
   function loadTasks() {
@@ -167,7 +180,7 @@ var DDLRadar = (function () {
           showAiMessage('', '');
           dom.aiResult.style.display = 'block';
           dom.aiResult.className = 'ai-result';
-          dom.aiResult.innerHTML = escHtml(advice);
+          dom.aiResult.innerHTML = renderMarkdown(advice);
         } else {
           showAiMessage('未能获取到建议内容', 'error');
         }
@@ -506,6 +519,160 @@ var DDLRadar = (function () {
     return String(str)
       .replace(/&/g, '&amp;')
       .replace(/"/g, '&quot;');
+  }
+
+  // --- Markdown 渲染 ---
+  function renderMarkdown(md) {
+    var html = escHtml(String(md));
+
+    // 围栏代码块 ```...```
+    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, function (_, lang, code) {
+      return '<pre><code>' + code.trim() + '</code></pre>';
+    });
+
+    // 行内代码 `...`
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    // 标题
+    html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
+    html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+    html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+
+    // 加粗
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+    // 斜体
+    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+    // 引用块 &gt;  (escHtml 把 > 转成了 &gt;)
+    html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+
+    // 水平线
+    html = html.replace(/^---$/gm, '<hr>');
+
+    // 无序列表：连续 `- ` 行归为一组
+    html = html.replace(/((?:^- .+\n?)+)/gm, function (block) {
+      var items = block.trim().split('\n').map(function (line) {
+        return '<li>' + line.replace(/^- /, '') + '</li>';
+      }).join('');
+      return '<ul>' + items + '</ul>';
+    });
+
+    // 有序列表：连续 `1. ` 行归为一组
+    html = html.replace(/((?:^\d+\. .+\n?)+)/gm, function (block) {
+      var items = block.trim().split('\n').map(function (line) {
+        return '<li>' + line.replace(/^\d+\. /, '') + '</li>';
+      }).join('');
+      return '<ol>' + items + '</ol>';
+    });
+
+    // 段落：按双换行切分，非块级元素包 <p>
+    var blocks = html.split(/\n\n+/);
+    html = blocks.map(function (block) {
+      block = block.trim();
+      if (!block) return '';
+      if (/^<(h[1-6]|ul|ol|pre|blockquote|hr)/.test(block)) return block;
+      block = block.replace(/\n/g, '<br>');
+      return '<p>' + block + '</p>';
+    }).join('\n');
+
+    return html;
+  }
+
+  // --- AI 配置相关 ---
+
+  function loadConfig() {
+    fetch(API_BASE + '/api/config')
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function (json) {
+        var data = json.data || json;
+        if (data.configured) {
+          dom.cfgLabel.textContent = '(LLM · ' + escHtml(data.model) + ')';
+          dom.cfgLabel.style.color = '#00b894';
+          dom.cfgApiBase.value = data.api_base || '';
+          dom.cfgModel.value = data.model || '';
+        } else {
+          dom.cfgLabel.textContent = '(Mock 模式)';
+          dom.cfgLabel.style.color = '#b2bec3';
+        }
+      })
+      .catch(function (err) {
+        console.error('加载 AI 配置失败:', err);
+      });
+  }
+
+  function handleWeeklySummary() {
+    dom.aiWeeklyMessage.textContent = '正在生成...';
+    dom.aiWeeklyMessage.className = 'form-message';
+
+    fetch(API_BASE + '/api/ai/weekly', { method: 'POST' })
+      .then(function (res) {
+        if (!res.ok) {
+          return res.text().then(function (body) {
+            var detail = body;
+            try { var p = JSON.parse(body); detail = p.message || body; } catch (_) {}
+            throw new Error('HTTP ' + res.status + ': ' + detail);
+          });
+        }
+        return res.json();
+      })
+      .then(function (json) {
+        var advice = extractAdvice(json);
+        dom.aiWeeklyMessage.textContent = '生成成功';
+        dom.aiWeeklyMessage.className = 'form-message form-message--success';
+        dom.aiResult.style.display = 'block';
+        dom.aiResult.className = 'ai-result';
+        dom.aiResult.innerHTML = renderMarkdown(advice || '无法获取周总结内容');
+      })
+      .catch(function (err) {
+        console.error('周总结生成失败:', err.message || err);
+        dom.aiWeeklyMessage.textContent = '生成失败';
+        dom.aiWeeklyMessage.className = 'form-message form-message--error';
+        dom.aiResult.style.display = 'block';
+        dom.aiResult.className = 'ai-result ai-result--error';
+        dom.aiResult.innerHTML = escHtml(err.message || '周总结生成失败，请稍后重试');
+      });
+  }
+
+  function handleSaveConfig() {
+    var apiKey = dom.cfgApiKey.value.trim();
+    var apiBase = dom.cfgApiBase.value.trim();
+    var model = dom.cfgModel.value.trim();
+
+    dom.cfgMessage.textContent = '正在保存...';
+    dom.cfgMessage.className = 'form-message';
+
+    fetch(API_BASE + '/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: apiKey, api_base: apiBase, model: model })
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function () {
+        dom.cfgMessage.textContent = apiKey ? 'LLM 配置已保存' : '已重置为 Mock';
+        dom.cfgMessage.className = 'form-message form-message--success';
+        dom.cfgApiKey.value = '';
+        loadConfig();
+      })
+      .catch(function (err) {
+        console.error('保存配置失败:', err);
+        dom.cfgMessage.textContent = '保存失败: ' + (err.message || err);
+        dom.cfgMessage.className = 'form-message form-message--error';
+      });
+  }
+
+  function handleResetConfig() {
+    dom.cfgApiKey.value = '';
+    dom.cfgApiBase.value = '';
+    dom.cfgModel.value = '';
+    handleSaveConfig();
   }
 
   return {

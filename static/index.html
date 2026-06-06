@@ -118,6 +118,36 @@
             <span class="form-message" id="ai-message"></span>
           </div>
         </form>
+        <div class="ai-weekly">
+          <button type="button" class="btn btn-primary" id="btn-weekly-summary">
+            📊 生成 AI 周总结
+          </button>
+          <span class="form-message" id="ai-weekly-message"></span>
+        </div>
+
+        <details class="ai-settings">
+          <summary>⚙️ AI 设置 <span id="cfg-label"></span></summary>
+          <div class="ai-settings-body">
+            <div class="form-group">
+              <label for="cfg-api-key">API Key</label>
+              <input type="password" id="cfg-api-key" placeholder="sk-...">
+            </div>
+            <div class="form-group">
+              <label for="cfg-api-base">API Base URL</label>
+              <input type="text" id="cfg-api-base" placeholder="https://api.deepseek.com">
+            </div>
+            <div class="form-group">
+              <label for="cfg-model">Model</label>
+              <input type="text" id="cfg-model" placeholder="deepseek-chat">
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn-primary" id="btn-save-config">保存配置</button>
+              <button type="button" class="btn btn-outline" id="btn-reset-config">重置为 Mock</button>
+              <span class="form-message" id="cfg-message"></span>
+            </div>
+          </div>
+        </details>
+
         <div class="ai-result" id="ai-result" style="display:none;"></div>
       </div>
     </section>

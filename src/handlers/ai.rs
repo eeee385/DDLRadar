@@ -43,8 +43,13 @@ pub async fn weekly_summary(
     State(state): State<AppState>,
 ) -> Result<Json<ApiResponse<AiSuggestResponse>>, AppError> {
     // 从数据库获取非完成任务并计算风险
+    // 提前 clone 所需字段，避免 spawn_blocking move 掉整个 state
+    let db = state.db.clone();
+    let llm_advisor = state.llm_advisor.clone();
+    let ai_advisor = state.ai_advisor.clone();
+
     let tasks_with_risk: Vec<TaskWithRisk> = tokio::task::spawn_blocking(move || {
-        let conn = state.db.lock().unwrap();
+        let conn = db.lock().unwrap();
         let non_done = db::get_non_done_tasks(&conn)
             .map_err(|e| AppError::Database(e))?;
         let now = chrono::Local::now().naive_local();
@@ -61,21 +66,18 @@ pub async fn weekly_summary(
     })
     .await??;
 
-    let summary = if state.llm_advisor.is_configured() {
-        state
-            .llm_advisor
+    let summary = if llm_advisor.is_configured() {
+        llm_advisor
             .generate_weekly_summary(&tasks_with_risk)
             .unwrap_or_else(|_| {
                 // LLM 调用失败，降级到 Mock
-                state
-                    .ai_advisor
+                ai_advisor
                     .generate_weekly_summary(&tasks_with_risk)
                     .unwrap_or_else(|e| format!("AI 服务暂不可用: {}", e.0))
             })
     } else {
         // 未配置 LLM，直接使用 Mock
-        state
-            .ai_advisor
+        ai_advisor
             .generate_weekly_summary(&tasks_with_risk)
             .map_err(|e| AppError::Internal(format!("AI error: {}", e.0)))?
     };
