@@ -29,3 +29,17 @@
 - 修改了handlers中对于ai的接口调用方式，新的调用方式实现了LLM建议、周总结、LLM转MOCK等功能。
 - 在state.rs中添加了llm字段。
 - 在main.rs中添加了对于llm的初始设置。
+
+### 2026/6/6 24:00
+- 再次修改了llm.rs，现在的真实ai变得动态可配置了。
+- 新增了config.rs文件，以支持运行时更新llm_api，显示llm配置信息。
+
+### 2026/6/7 0:30
+- 前端（index.html）新增 AI 周总结按钮和 AI 设置折叠面板，支持运行时配置 API Key/Base/Model。
+- app.js 新增 loadConfig、handleWeeklySummary、handleSaveConfig、handleResetConfig 四个函数。
+- styles.css 新增 .ai-weekly、.ai-settings、.btn-outline 等样式。
+- handlers/ai.rs 修复 weekly_summary 中 state 被 spawn_blocking move 掉的 bug，提前 clone db/llm_advisor/ai_advisor。
+- 新增 renderMarkdown() 函数，支持标题、加粗、斜体、代码块、列表、引用等 markdown 语法的前端渲染。
+- AI 结果显示从 escHtml() 改为 renderMarkdown()，错误信息保留 escHtml 安全处理。
+- styles.css 新增 .ai-result 内 markdown 元素（h1-h4/p/ul/ol/code/pre/blockquote/hr）的完整样式。
+- ai/mock.rs 修复周总结序号全为 1 的问题，将每个任务的两行合并为一行，使有序列表连续。
