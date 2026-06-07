@@ -583,7 +583,7 @@ var DDLRadar = (function () {
   // --- AI 配置相关 ---
 
   function loadConfig() {
-    fetch(API_BASE + '/api/config')
+    fetch(API_BASE + '/api/ai/config')
       .then(function (res) {
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return res.json();
@@ -646,7 +646,7 @@ var DDLRadar = (function () {
     dom.cfgMessage.textContent = '正在保存...';
     dom.cfgMessage.className = 'form-message';
 
-    fetch(API_BASE + '/api/config', {
+    fetch(API_BASE + '/api/ai/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ api_key: apiKey, api_base: apiBase, model: model })

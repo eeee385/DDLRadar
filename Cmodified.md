@@ -43,3 +43,10 @@
 - AI 结果显示从 escHtml() 改为 renderMarkdown()，错误信息保留 escHtml 安全处理。
 - styles.css 新增 .ai-result 内 markdown 元素（h1-h4/p/ul/ol/code/pre/blockquote/hr）的完整样式。
 - ai/mock.rs 修复周总结序号全为 1 的问题，将每个任务的两行合并为一行，使有序列表连续。
+
+### 2026/6/7 10:19
+- 将 config.rs 集成到 ai.rs 中，删除独立的 handlers/config.rs，符合概要设计文档的模块划分。
+- handlers/ai.rs 新增 get_config / update_config 两个 handler 及 ConfigResponse / ConfigUpdateRequest 结构体。
+- handlers/mod.rs 移除 pub mod config;。
+- main.rs 路由 /api/config → /api/ai/config，handler 路径改为 handlers::ai::xxx。
+- static/app.js 两处 API 路径同步改为 /api/ai/config。
