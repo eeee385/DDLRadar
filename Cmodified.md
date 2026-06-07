@@ -50,3 +50,9 @@
 - handlers/mod.rs 移除 pub mod config;。
 - main.rs 路由 /api/config → /api/ai/config，handler 路径改为 handlers::ai::xxx。
 - static/app.js 两处 API 路径同步改为 /api/ai/config。
+
+### 2026/6/7 10:38
+- 将 src/utils.rs 移至 src/ai/utils.rs，内聚到 AI 模块内部。
+- src/ai/mod.rs 新增 pub mod utils;。
+- src/main.rs 移除 mod utils;。
+- mock.rs / llm.rs 导入路径从 crate::utils:: 改为 super::utils::。

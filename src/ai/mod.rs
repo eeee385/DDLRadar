@@ -1,5 +1,6 @@
 mod mock;
 mod llm;
+pub mod utils;
 pub use mock::MockAiAdvisor;
 pub use llm::{LLMAiAdvisor, LLMConfig};
 

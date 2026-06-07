@@ -11,7 +11,6 @@ pub fn estimate_available_days(deadline: &str) -> i64 {
         .unwrap_or_else(|_| Local::now().naive_local());
     let now = Local::now().naive_local();
     let duration = dl.signed_duration_since(now);
-    // duration.num_hours().max(1) / 24
     if duration.num_minutes() < 0 {
         return -1;
     }
@@ -19,4 +18,3 @@ pub fn estimate_available_days(deadline: &str) -> i64 {
         return duration.num_hours() / 24;
     }
 }
-

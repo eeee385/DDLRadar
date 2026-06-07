@@ -1,6 +1,6 @@
 use super::{AiAdvisor, AiError, AiTaskInfo};
 // use super::now_string;
-use crate::utils::{now_string,estimate_available_days};
+use super::utils::{now_string, estimate_available_days};
 use crate::models::{TaskType,Status,Priority,TaskWithRisk,Task};
 pub struct MockAiAdvisor;
 

@@ -1,6 +1,6 @@
 use super::{AiAdvisor, AiError, AiTaskInfo};
 // use super::now_string;
-use crate::utils::estimate_available_days;
+use super::utils::estimate_available_days;
 use crate::models::{TaskType,Status,Priority};
 use secrecy::{ExposeSecret, SecretString};
 use serde_json::json;
