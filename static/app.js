@@ -27,9 +27,7 @@ var DDLRadar = (function () {
     dom.priority = document.getElementById('priority');
     dom.status = document.getElementById('status');
     dom.description = document.getElementById('description');
-    dom.submitBtn = dom.taskForm.querySelector('button[type="submit"]');
     dom.formMessage = document.getElementById('form-message');
-
     dom.aiForm = document.getElementById('ai-form');
     dom.aiTaskSelect = document.getElementById('ai-task-select');
     dom.aiMessage = document.getElementById('ai-message');
@@ -37,7 +35,6 @@ var DDLRadar = (function () {
     dom.aiEmpty = document.getElementById('ai-empty');
     dom.btnWeeklySummary = document.getElementById('btn-weekly-summary');
     dom.aiWeeklyMessage = document.getElementById('ai-weekly-message');
-
     dom.cfgLabel = document.getElementById('cfg-label');
     dom.cfgApiKey = document.getElementById('cfg-api-key');
     dom.cfgApiBase = document.getElementById('cfg-api-base');
@@ -45,13 +42,6 @@ var DDLRadar = (function () {
     dom.cfgMessage = document.getElementById('cfg-message');
     dom.btnSaveConfig = document.getElementById('btn-save-config');
     dom.btnResetConfig = document.getElementById('btn-reset-config');
-
-    dom.taskModal = document.getElementById('task-modal');
-    dom.taskModalContent = document.getElementById('task-modal-content');
-    dom.aiModal = document.getElementById('ai-modal');
-    dom.aiModalTitle = document.getElementById('ai-modal-title');
-    dom.aiModalMeta = document.getElementById('ai-modal-meta');
-    dom.aiModalContent = document.getElementById('ai-modal-content');
 
     dom.taskForm.addEventListener('submit', handleFormSubmit);
     dom.aiForm.addEventListener('submit', handleAiSubmit);
@@ -61,59 +51,9 @@ var DDLRadar = (function () {
     dom.btnSaveConfig.addEventListener('click', handleSaveConfig);
     dom.btnResetConfig.addEventListener('click', handleResetConfig);
 
-    document.addEventListener('click', handleGlobalClick);
-    document.addEventListener('keydown', handleGlobalKeydown);
-
     loadTasks();
     loadDashboard();
     loadConfig();
-  }
-
-  function handleGlobalClick(e) {
-    var closeBtn = e.target.closest('[data-close-modal]');
-    if (closeBtn) {
-      closeModal(closeBtn.getAttribute('data-close-modal'));
-      return;
-    }
-
-    var detailBtn = e.target.closest('.btn-view-detail');
-    if (detailBtn) {
-      var taskId = detailBtn.getAttribute('data-view-id');
-      openTaskDetail(taskId);
-      return;
-    }
-
-    var card = e.target.closest('.task-card');
-    if (card && !e.target.closest('.task-card__actions') && !e.target.closest('.btn-delete') && !e.target.closest('.select-status') && !e.target.closest('.input-deadline')) {
-      var taskIdFromCard = card.getAttribute('data-task-id');
-      openTaskDetail(taskIdFromCard);
-    }
-  }
-
-  function handleGlobalKeydown(e) {
-    if (e.key === 'Escape') {
-      closeModal('task-modal');
-      closeModal('ai-modal');
-    }
-  }
-
-  function openModal(id) {
-    var modal = document.getElementById(id);
-    if (!modal) return;
-    modal.classList.add('is-open');
-    modal.setAttribute('aria-hidden', 'false');
-    document.body.classList.add('modal-open');
-  }
-
-  function closeModal(id) {
-    var modal = document.getElementById(id);
-    if (!modal) return;
-    modal.classList.remove('is-open');
-    modal.setAttribute('aria-hidden', 'true');
-
-    if (!document.querySelector('.modal.is-open')) {
-      document.body.classList.remove('modal-open');
-    }
   }
 
   function loadTasks() {
@@ -191,7 +131,14 @@ var DDLRadar = (function () {
       return;
     }
 
-    var task = findTaskById(taskId);
+    var task = null;
+    for (var i = 0; i < tasksCache.length; i++) {
+      if (String(tasksCache[i].id) === String(taskId)) {
+        task = tasksCache[i];
+        break;
+      }
+    }
+
     if (!task) {
       showAiMessage('未找到所选任务', 'error');
       return;
@@ -230,9 +177,10 @@ var DDLRadar = (function () {
       .then(function (json) {
         var advice = extractAdvice(json);
         if (advice) {
-          showAiMessage('生成成功', 'success');
-          dom.aiResult.style.display = 'none';
-          openAiModal('AI 建议', advice);
+          showAiMessage('', '');
+          dom.aiResult.style.display = 'block';
+          dom.aiResult.className = 'ai-result';
+          dom.aiResult.innerHTML = renderMarkdown(advice);
         } else {
           showAiMessage('未能获取到建议内容', 'error');
         }
@@ -241,82 +189,10 @@ var DDLRadar = (function () {
         console.error('AI 建议获取失败:', err.message || err);
         var msg = err.message || 'AI 建议获取失败，请稍后重试';
         showAiMessage(msg, 'error');
-        openAiModal('AI 建议', escHtml(msg), true);
+        dom.aiResult.style.display = 'block';
+        dom.aiResult.className = 'ai-result ai-result--error';
+        dom.aiResult.innerHTML = escHtml(msg);
       });
-  }
-
-  function handleWeeklySummary() {
-    dom.aiWeeklyMessage.textContent = '正在生成...';
-    dom.aiWeeklyMessage.className = 'form-message';
-
-    fetch(API_BASE + '/api/ai/weekly', { method: 'POST' })
-      .then(function (res) {
-        if (!res.ok) {
-          return res.text().then(function (body) {
-            var detail = body;
-            try {
-              var p = JSON.parse(body);
-              detail = p.message || body;
-            } catch (_) {}
-            throw new Error('HTTP ' + res.status + ': ' + detail);
-          });
-        }
-        return res.json();
-      })
-      .then(function (json) {
-        var advice = extractAdvice(json);
-        dom.aiWeeklyMessage.textContent = '生成成功';
-        dom.aiWeeklyMessage.className = 'form-message form-message--success';
-        openAiModal('AI 周总结', advice || '无法获取周总结内容');
-      })
-      .catch(function (err) {
-        console.error('周总结生成失败:', err.message || err);
-        dom.aiWeeklyMessage.textContent = '生成失败';
-        dom.aiWeeklyMessage.className = 'form-message form-message--error';
-        openAiModal('AI 周总结', escHtml(err.message || '周总结生成失败，请稍后重试'), true);
-      });
-  }
-
-  function openAiModal(title, content, isError) {
-    dom.aiModalTitle.textContent = title;
-    dom.aiModalMeta.textContent = '生成时间：' + formatNow();
-    dom.aiModalContent.className = 'ai-result ai-result--modal' + (isError ? ' ai-result--error' : '');
-    dom.aiModalContent.innerHTML = isError ? content : renderMarkdown(content);
-    openModal('ai-modal');
-  }
-
-  function openTaskDetail(taskId) {
-    var task = findTaskById(taskId);
-    if (!task) return;
-
-    var typeLabel = TYPE_LABEL[task.task_type] || task.task_type || '未分类';
-    var priorityLabel = PRIORITY_LABEL[task.priority] || task.priority || '中';
-    var statusLabel = STATUS_LABEL[task.status] || task.status || '待办';
-    var riskText = getRiskText(task.risk_level || 'low');
-
-    var html = ''
-      + '<div class="detail-grid">'
-      +   '<div class="detail-item"><span class="detail-label">任务标题</span><div class="detail-value detail-value--title">' + escHtml(task.title || '未命名任务') + '</div></div>'
-      +   '<div class="detail-item"><span class="detail-label">课程名称</span><div class="detail-value">' + escHtml(task.course || '未填写') + '</div></div>'
-      +   '<div class="detail-item"><span class="detail-label">任务类型</span><div class="detail-value">' + escHtml(typeLabel) + '</div></div>'
-      +   '<div class="detail-item"><span class="detail-label">截止时间</span><div class="detail-value">' + escHtml(task.deadline || '未设置') + '</div></div>'
-      +   '<div class="detail-item"><span class="detail-label">优先级</span><div class="detail-value">' + escHtml(priorityLabel) + '</div></div>'
-      +   '<div class="detail-item"><span class="detail-label">状态</span><div class="detail-value">' + escHtml(statusLabel) + '</div></div>'
-      +   '<div class="detail-item"><span class="detail-label">风险等级</span><div class="detail-value">' + escHtml(riskText) + '</div></div>'
-      +   '<div class="detail-item detail-item--full"><span class="detail-label">任务描述</span><div class="detail-value detail-value--description">' + nl2br(escHtml(task.description || '暂无描述')) + '</div></div>'
-      + '</div>';
-
-    dom.taskModalContent.innerHTML = html;
-    openModal('task-modal');
-  }
-
-  function findTaskById(taskId) {
-    for (var i = 0; i < tasksCache.length; i++) {
-      if (String(tasksCache[i].id) === String(taskId)) {
-        return tasksCache[i];
-      }
-    }
-    return null;
   }
 
   function extractAdvice(json) {
@@ -364,12 +240,8 @@ var DDLRadar = (function () {
   function handleFormSubmit(e) {
     e.preventDefault();
 
-    dom.title.classList.remove('input-error');
-
     var titleVal = dom.title.value.trim();
     if (!titleVal) {
-      dom.title.classList.add('input-error');
-      dom.title.focus();
       showFormMessage('请输入任务标题', 'error');
       return;
     }
@@ -389,11 +261,6 @@ var DDLRadar = (function () {
       description: dom.description.value.trim()
     };
 
-    if (dom.submitBtn) {
-      dom.submitBtn.disabled = true;
-      dom.submitBtn.textContent = '提交中...';
-    }
-
     fetch(API_BASE + '/api/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -407,22 +274,10 @@ var DDLRadar = (function () {
         showFormMessage('任务添加成功', 'success');
         dom.taskForm.reset();
         loadTasks();
-        loadDashboard();
-
-        var taskListSection = document.getElementById('task-list-section');
-        if (taskListSection) {
-          taskListSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
       })
       .catch(function (err) {
         console.error('任务添加失败:', err);
         showFormMessage('任务添加失败，请检查后端是否运行', 'error');
-      })
-      .finally(function () {
-        if (dom.submitBtn) {
-          dom.submitBtn.disabled = false;
-          dom.submitBtn.textContent = '添加任务';
-        }
       });
   }
 
@@ -454,7 +309,6 @@ var DDLRadar = (function () {
       .then(function () {
         showFormMessage('任务删除成功', 'success');
         loadTasks();
-        loadDashboard();
       })
       .catch(function (err) {
         console.error('任务删除失败:', err);
@@ -550,7 +404,6 @@ var DDLRadar = (function () {
       .then(function () {
         showFormMessage('状态更新成功', 'success');
         loadTasks();
-        loadDashboard();
       })
       .catch(function (err) {
         console.error('状态更新失败:', err);
@@ -571,7 +424,6 @@ var DDLRadar = (function () {
       .then(function () {
         showFormMessage('DDL更新成功', 'success');
         loadTasks();
-        loadDashboard();
       })
       .catch(function (err) {
         console.error('DDL更新失败:', err);
@@ -601,18 +453,16 @@ var DDLRadar = (function () {
   }
 
   function buildCard(task) {
-    var title = escHtml(task.title || '未命名任务');
-    var course = escHtml(task.course || '未填写课程');
-    var typeLabel = TYPE_LABEL[task.task_type] || task.task_type || '未分类';
-    var deadline = escHtml(task.deadline || '未设置');
-    var priorityLabel = PRIORITY_LABEL[task.priority] || task.priority || '中';
-    var riskLevel = task.risk_level || 'low';
+    var title = escHtml(task.title || '');
+    var course = escHtml(task.course || '');
+    var typeLabel = TYPE_LABEL[task.task_type] || task.task_type || '';
+    var deadline = escHtml(task.deadline || '');
+    var priorityLabel = PRIORITY_LABEL[task.priority] || task.priority || '';
+    var riskLevel = task.risk_level || '';
     var currentStatus = task.status || 'todo';
     var taskJson = JSON.stringify(task);
-    var deadlineLocal = toDatetimeLocal(task.deadline || '');
 
-    var statusText = STATUS_LABEL[currentStatus] || '待办';
-    var riskText = getRiskText(riskLevel);
+    var deadlineLocal = toDatetimeLocal(task.deadline || '');
 
     var statusOptions = ''
       + '<option value="todo"' + (currentStatus === 'todo' ? ' selected' : '') + '>待办</option>'
@@ -620,54 +470,41 @@ var DDLRadar = (function () {
       + '<option value="done"' + (currentStatus === 'done' ? ' selected' : '') + '>已完成</option>';
 
     return ''
-      + '<article class="task-card" data-task="' + escAttr(taskJson) + '" data-task-id="' + escAttr(String(task.id)) + '">'
-      +   '<div class="task-card__main">'
-      +     '<div class="task-card__header">'
-      +       '<h3 class="task-card__title">' + title + '</h3>'
-      +       '<div class="task-card__badges">'
-      +         '<span class="badge badge--risk badge--risk-' + escAttr(riskLevel) + '">' + escHtml(riskText) + '</span>'
-      +         '<span class="badge badge--priority badge--priority-' + escAttr(task.priority || 'mid') + '">优先级：' + escHtml(priorityLabel) + '</span>'
-      +       '</div>'
-      +     '</div>'
-
-      +     '<div class="task-card__meta">'
-      +       '<span class="task-card__meta-item">课程：' + course + '</span>'
-      +       '<span class="task-card__meta-item">类型：' + escHtml(typeLabel) + '</span>'
-      +       '<span class="task-card__meta-item task-card__meta-item--deadline">截止：' + deadline + '</span>'
-      +     '</div>'
-
-      +     '<div class="task-card__footer">'
-      +       '<span class="badge badge--status badge--status-' + escAttr(currentStatus) + '">' + escHtml(statusText) + '</span>'
-      +       '<button type="button" class="btn-link btn-view-detail" data-view-id="' + escAttr(String(task.id)) + '">查看详情</button>'
+      + '<div class="task-card" data-task="' + escAttr(taskJson) + '"'
+      + ' style="background:#fff;border-radius:6px;padding:12px 16px;margin-bottom:10px;'
+      + 'box-shadow:0 1px 3px rgba(0,0,0,0.08);border-left:4px solid ' + borderColor(riskLevel) + ';'
+      + 'display:flex;justify-content:space-between;align-items:flex-start;">'
+      +   '<div>'
+      +     '<div style="font-size:15px;font-weight:600;margin-bottom:6px;color:#2d3436;">' + title + '</div>'
+      +     '<div style="font-size:12px;color:#636e72;display:flex;flex-wrap:wrap;gap:4px 16px;">'
+      +       '<span>课程: ' + course + '</span>'
+      +       '<span>类型: ' + typeLabel + '</span>'
+      +       '<span>截止: ' + deadline + '</span>'
+      +       '<span>优先级: ' + priorityLabel + '</span>'
+      +       '<span>风险: ' + riskLevel + '</span>'
       +     '</div>'
       +   '</div>'
-
-      +   '<div class="task-card__actions">'
-      +     '<label class="task-card__field">'
-      +       '<span class="task-card__field-label">截止时间</span>'
-      +       '<input type="datetime-local" class="input-deadline" value="' + escAttr(deadlineLocal) + '">'
-      +     '</label>'
-
-      +     '<div class="task-card__action-row">'
-      +       '<label class="task-card__field task-card__field--compact">'
-      +         '<span class="task-card__field-label">状态</span>'
-      +         '<select class="select-status" data-task-id="' + escHtml(String(task.id)) + '">'
-      +           statusOptions
-      +         '</select>'
-      +       '</label>'
-
-      +       '<button class="btn-delete" data-delete-id="' + escHtml(String(task.id)) + '">删除</button>'
+      +   '<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">'
+      +     '<input type="datetime-local" class="input-deadline" value="' + escAttr(deadlineLocal) + '"'
+      +     ' style="width:170px;padding:2px 4px;font-size:11px;border:1px solid #dfe6e9;border-radius:3px;background:#fff;">'
+      +     '<div style="display:flex;align-items:center;gap:6px;">'
+      +       '<select class="select-status" data-task-id="' + escHtml(String(task.id)) + '"'
+      +       ' style="padding:3px 6px;font-size:12px;border:1px solid #dfe6e9;border-radius:3px;background:#fff;">'
+      +       statusOptions
+      +       '</select>'
+      +       '<button class="btn-delete" data-delete-id="' + escHtml(String(task.id)) + '"'
+      +       ' style="padding:4px 12px;font-size:12px;border:1px solid #d63031;'
+      +       'background:#fff;color:#d63031;border-radius:4px;cursor:pointer;">删除</button>'
       +     '</div>'
       +   '</div>'
-      + '</article>';
+      + '</div>';
   }
 
-  function getRiskText(level) {
-    if (level === 'overdue') return '已逾期';
-    if (level === 'high') return '高风险';
-    if (level === 'mid') return '中风险';
-    if (level === 'completed') return '已完成';
-    return '低风险';
+  function borderColor(level) {
+    if (level === 'overdue' || level === 'high') return '#d63031';
+    if (level === 'mid') return '#e17055';
+    if (level === 'completed') return '#b2bec3';
+    return '#00b894';
   }
 
   function escHtml(str) {
@@ -684,38 +521,37 @@ var DDLRadar = (function () {
       .replace(/"/g, '&quot;');
   }
 
-  function nl2br(str) {
-    return String(str).replace(/\n/g, '<br>');
-  }
-
-  function formatNow() {
-    var d = new Date();
-    var y = d.getFullYear();
-    var m = String(d.getMonth() + 1).padStart(2, '0');
-    var day = String(d.getDate()).padStart(2, '0');
-    var h = String(d.getHours()).padStart(2, '0');
-    var min = String(d.getMinutes()).padStart(2, '0');
-    var s = String(d.getSeconds()).padStart(2, '0');
-    return y + '-' + m + '-' + day + ' ' + h + ':' + min + ':' + s;
-  }
-
+  // --- Markdown 渲染 ---
   function renderMarkdown(md) {
     var html = escHtml(String(md));
 
+    // 围栏代码块 ```...```
     html = html.replace(/```(\w*)\n([\s\S]*?)```/g, function (_, lang, code) {
       return '<pre><code>' + code.trim() + '</code></pre>';
     });
 
+    // 行内代码 `...`
     html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    // 标题
     html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
     html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
     html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
     html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+
+    // 加粗
     html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+    // 斜体
     html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+    // 引用块 &gt;  (escHtml 把 > 转成了 &gt;)
     html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+
+    // 水平线
     html = html.replace(/^---$/gm, '<hr>');
 
+    // 无序列表：连续 `- ` 行归为一组
     html = html.replace(/((?:^- .+\n?)+)/gm, function (block) {
       var items = block.trim().split('\n').map(function (line) {
         return '<li>' + line.replace(/^- /, '') + '</li>';
@@ -723,6 +559,7 @@ var DDLRadar = (function () {
       return '<ul>' + items + '</ul>';
     });
 
+    // 有序列表：连续 `1. ` 行归为一组
     html = html.replace(/((?:^\d+\. .+\n?)+)/gm, function (block) {
       var items = block.trim().split('\n').map(function (line) {
         return '<li>' + line.replace(/^\d+\. /, '') + '</li>';
@@ -730,6 +567,7 @@ var DDLRadar = (function () {
       return '<ol>' + items + '</ol>';
     });
 
+    // 段落：按双换行切分，非块级元素包 <p>
     var blocks = html.split(/\n\n+/);
     html = blocks.map(function (block) {
       block = block.trim();
@@ -742,6 +580,8 @@ var DDLRadar = (function () {
     return html;
   }
 
+  // --- AI 配置相关 ---
+
   function loadConfig() {
     fetch(API_BASE + '/api/ai/config')
       .then(function (res) {
@@ -751,7 +591,7 @@ var DDLRadar = (function () {
       .then(function (json) {
         var data = json.data || json;
         if (data.configured) {
-          dom.cfgLabel.textContent = '(LLM · ' + data.model + ')';
+          dom.cfgLabel.textContent = '(LLM · ' + escHtml(data.model) + ')';
           dom.cfgLabel.style.color = '#00b894';
           dom.cfgApiBase.value = data.api_base || '';
           dom.cfgModel.value = data.model || '';
@@ -762,6 +602,39 @@ var DDLRadar = (function () {
       })
       .catch(function (err) {
         console.error('加载 AI 配置失败:', err);
+      });
+  }
+
+  function handleWeeklySummary() {
+    dom.aiWeeklyMessage.textContent = '正在生成...';
+    dom.aiWeeklyMessage.className = 'form-message';
+
+    fetch(API_BASE + '/api/ai/weekly', { method: 'POST' })
+      .then(function (res) {
+        if (!res.ok) {
+          return res.text().then(function (body) {
+            var detail = body;
+            try { var p = JSON.parse(body); detail = p.message || body; } catch (_) {}
+            throw new Error('HTTP ' + res.status + ': ' + detail);
+          });
+        }
+        return res.json();
+      })
+      .then(function (json) {
+        var advice = extractAdvice(json);
+        dom.aiWeeklyMessage.textContent = '生成成功';
+        dom.aiWeeklyMessage.className = 'form-message form-message--success';
+        dom.aiResult.style.display = 'block';
+        dom.aiResult.className = 'ai-result';
+        dom.aiResult.innerHTML = renderMarkdown(advice || '无法获取周总结内容');
+      })
+      .catch(function (err) {
+        console.error('周总结生成失败:', err.message || err);
+        dom.aiWeeklyMessage.textContent = '生成失败';
+        dom.aiWeeklyMessage.className = 'form-message form-message--error';
+        dom.aiResult.style.display = 'block';
+        dom.aiResult.className = 'ai-result ai-result--error';
+        dom.aiResult.innerHTML = escHtml(err.message || '周总结生成失败，请稍后重试');
       });
   }
 
