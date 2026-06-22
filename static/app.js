@@ -661,7 +661,7 @@ var DDLRadar = (function () {
       +   '</div>'
       + '</article>';
   }
-
+/* test */
   function getRiskText(level) {
     if (level === 'overdue') return '已逾期';
     if (level === 'high') return '高风险';
