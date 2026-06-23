@@ -1,22 +1,20 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DDLRadar - 学业DDL雷达</title>
-  <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DDLRadar</title>
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-
   <header class="header">
     <h1 class="header-title">DDLRadar</h1>
-    <p class="header-subtitle">学业DDL雷达 - 智能任务管理</p>
+    <p class="header-subtitle">课程任务管理与 AI 学习建议面板</p>
   </header>
 
   <main class="main">
-
-    <section class="dashboard" id="dashboard">
-      <h2 class="section-title">Dashboard 数据看板</h2>
+    <section id="dashboard" class="dashboard-section">
+      <h2 class="section-title">概览面板</h2>
       <div class="dashboard-grid">
         <div class="dashboard-card" id="stat-total">
           <span class="card-value">--</span>
@@ -24,140 +22,171 @@
         </div>
         <div class="dashboard-card" id="stat-todo">
           <span class="card-value">--</span>
-          <span class="card-label">待办任务数</span>
+          <span class="card-label">待办任务</span>
         </div>
         <div class="dashboard-card dashboard-card--warning" id="stat-high-risk">
           <span class="card-value">--</span>
-          <span class="card-label">高风险任务数</span>
+          <span class="card-label">高风险任务</span>
         </div>
         <div class="dashboard-card dashboard-card--danger" id="stat-overdue">
           <span class="card-value">--</span>
-          <span class="card-label">逾期任务数</span>
+          <span class="card-label">已逾期任务</span>
         </div>
       </div>
     </section>
 
-    <section class="task-form-section" id="task-form-section">
-      <h2 class="section-title">新增任务</h2>
-      <form class="task-form" id="task-form">
+    <section class="task-create-section">
+      <h2 class="section-title">添加任务</h2>
+      <form id="task-form" class="task-form">
         <div class="form-group">
           <label for="title">任务标题</label>
-          <input type="text" id="title" name="title" placeholder="请输入任务标题" required>
+          <input id="title" name="title" type="text" placeholder="请输入任务标题" />
         </div>
+
         <div class="form-group">
-          <label for="course">所属课程</label>
-          <input type="text" id="course" name="course" placeholder="请输入课程名称">
+          <label for="course">课程名称</label>
+          <input id="course" name="course" type="text" placeholder="请输入课程名称" />
         </div>
+
         <div class="form-row">
           <div class="form-group form-group--half">
             <label for="task_type">任务类型</label>
-            <select id="task_type" name="task_type" required>
-              <option value="">请选择类型</option>
+            <select id="task_type" name="task_type">
               <option value="homework">作业</option>
               <option value="exam">考试</option>
               <option value="project">课程项目</option>
               <option value="other">其他</option>
             </select>
           </div>
+
           <div class="form-group form-group--half">
-            <label for="deadline">截止日期</label>
-            <input type="datetime-local" id="deadline" name="deadline" required>
+            <label for="deadline">截止时间</label>
+            <input id="deadline" name="deadline" type="datetime-local" />
           </div>
         </div>
+
         <div class="form-row">
           <div class="form-group form-group--half">
             <label for="priority">优先级</label>
             <select id="priority" name="priority">
-              <option value="mid">中</option>
               <option value="high">高</option>
+              <option value="mid" selected>中</option>
               <option value="low">低</option>
             </select>
           </div>
+
           <div class="form-group form-group--half">
-            <label for="status">状态</label>
+            <label for="status">任务状态</label>
             <select id="status" name="status">
-              <option value="todo">待办</option>
+              <option value="todo" selected>待办</option>
               <option value="doing">进行中</option>
               <option value="done">已完成</option>
             </select>
           </div>
         </div>
+
         <div class="form-group">
           <label for="description">任务描述</label>
-          <textarea id="description" name="description" rows="3" placeholder="请输入任务详情描述"></textarea>
+          <textarea id="description" name="description" placeholder="请输入任务详情描述"></textarea>
         </div>
+
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">添加任务</button>
-          <span class="form-message" id="form-message"></span>
+          <div id="form-message" class="form-message"></div>
         </div>
       </form>
     </section>
 
-    <section class="task-list-section" id="task-list-section">
+    <section id="task-list-section">
       <h2 class="section-title">任务列表</h2>
-      <div class="task-list-container" id="task-list">
-        <p class="placeholder-text">暂无任务数据，请先添加任务</p>
+      <div class="task-list-container">
+        <div id="task-list"></div>
       </div>
     </section>
 
-    <section class="ai-section" id="ai-section">
+    <section id="ai-suggestion">
       <h2 class="section-title">AI 建议</h2>
-      <div class="ai-container" id="ai-suggestion">
-        <div class="ai-empty" id="ai-empty">
-          <p class="placeholder-text">暂无任务，请先添加任务后再获取 AI 建议</p>
-        </div>
-        <form class="ai-form" id="ai-form" style="display:none;">
+      <div class="ai-container">
+        <form id="ai-form" class="ai-form">
           <div class="form-group">
             <label for="ai-task-select">选择任务</label>
-            <select id="ai-task-select" name="ai-task-select">
+            <select id="ai-task-select">
               <option value="">请选择要分析的任务</option>
             </select>
           </div>
           <div class="form-actions">
             <button type="submit" class="btn btn-primary">获取 AI 建议</button>
-            <span class="form-message" id="ai-message"></span>
+            <div id="ai-message" class="form-message"></div>
           </div>
         </form>
+
         <div class="ai-weekly">
-          <button type="button" class="btn btn-primary" id="btn-weekly-summary">
-            📊 生成 AI 周总结
-          </button>
-          <span class="form-message" id="ai-weekly-message"></span>
+          <button id="btn-weekly-summary" class="btn btn-primary">生成 AI 周总结</button>
+          <div id="ai-weekly-message" class="form-message"></div>
         </div>
 
         <details class="ai-settings">
-          <summary>⚙️ AI 设置 <span id="cfg-label"></span></summary>
+          <summary>AI 设置 <span id="cfg-label">(Mock 模式)</span></summary>
           <div class="ai-settings-body">
             <div class="form-group">
               <label for="cfg-api-key">API Key</label>
-              <input type="password" id="cfg-api-key" placeholder="sk-...">
+              <input id="cfg-api-key" type="password" placeholder="请输入 API Key" />
             </div>
             <div class="form-group">
-              <label for="cfg-api-base">API Base URL</label>
-              <input type="text" id="cfg-api-base" placeholder="https://api.deepseek.com">
+              <label for="cfg-api-base">API Base</label>
+              <input id="cfg-api-base" type="text" placeholder="例如：https://api.example.com/v1" />
             </div>
             <div class="form-group">
               <label for="cfg-model">Model</label>
-              <input type="text" id="cfg-model" placeholder="deepseek-chat">
+              <input id="cfg-model" type="text" placeholder="例如：gpt-4o-mini" />
             </div>
             <div class="form-actions">
-              <button type="button" class="btn btn-primary" id="btn-save-config">保存配置</button>
-              <button type="button" class="btn btn-outline" id="btn-reset-config">重置为 Mock</button>
-              <span class="form-message" id="cfg-message"></span>
+              <button id="btn-save-config" type="button" class="btn btn-primary">保存配置</button>
+              <button id="btn-reset-config" type="button" class="btn btn-outline">重置</button>
+              <div id="cfg-message" class="form-message"></div>
             </div>
           </div>
         </details>
 
-        <div class="ai-result" id="ai-result" style="display:none;"></div>
+        <p id="ai-empty" class="placeholder-text" style="display:none;">暂无可分析任务，请先添加任务</p>
+        <div id="ai-result" class="ai-result" style="display:none;"></div>
       </div>
     </section>
-
   </main>
 
   <footer class="footer">
-    <p>DDLRadar &copy; 2026</p>
+    <p>DDLRadar · Frontend Demo</p>
   </footer>
 
-  <script src="app.js"></script>
+  <!-- 任务详情弹窗 -->
+  <div id="task-modal" class="modal" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal="task-modal"></div>
+    <div class="modal-dialog modal-dialog--wide">
+      <div class="modal-header">
+        <h3 class="modal-title">任务详情</h3>
+        <button class="modal-close" data-close-modal="task-modal" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="task-modal-content"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI 内容弹窗 -->
+  <div id="ai-modal" class="modal" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal="ai-modal"></div>
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="ai-modal-title" class="modal-title">AI 内容</h3>
+        <button class="modal-close" data-close-modal="ai-modal" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="ai-modal-meta" class="modal-meta"></div>
+        <div id="ai-modal-content" class="ai-result ai-result--modal"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="./app.js"></script>
 </body>
 </html>
