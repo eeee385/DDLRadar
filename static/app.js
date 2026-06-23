@@ -4,6 +4,9 @@ var DDLRadar = (function () {
   var API_BASE = 'http://127.0.0.1:3000';
   var dom = {};
   var tasksCache = [];
+  var aiMessageTimer = null;
+  var weeklyMessageTimer = null;
+  var formMessageTimer = null;
 
   var TYPE_LABEL = { homework: '作业', exam: '考试', project: '课程项目', other: '其他' };
   var PRIORITY_LABEL = { high: '高', mid: '中', low: '低' };
@@ -207,7 +210,7 @@ var DDLRadar = (function () {
       description: task.description || ''
     };
 
-    showAiMessage('正在获取 AI 建议...', '');
+    showAiMessage('正在获取 AI 建议...', '', false);
 
     fetch(API_BASE + '/api/ai/suggest', {
       method: 'POST',
@@ -234,20 +237,23 @@ var DDLRadar = (function () {
           dom.aiResult.style.display = 'none';
           openAiModal('AI 建议', advice);
         } else {
-          showAiMessage('未能获取到建议内容', 'error');
+          var mockAdvice = buildMockAdvice(task);
+          showAiMessage('AI 返回为空，已降级为 Mock AI', 'success');
+          dom.aiResult.style.display = 'none';
+          openAiModal('Mock AI 建议', mockAdvice);
         }
       })
       .catch(function (err) {
         console.error('AI 建议获取失败:', err.message || err);
-        var msg = err.message || 'AI 建议获取失败，请稍后重试';
-        showAiMessage(msg, 'error');
-        openAiModal('AI 建议', escHtml(msg), true);
+        var mockAdvice = buildMockAdvice(task);
+        showAiMessage('AI 获取失败，已降级为 Mock AI', 'success');
+        dom.aiResult.style.display = 'none';
+        openAiModal('Mock AI 建议', mockAdvice);
       });
   }
 
   function handleWeeklySummary() {
-    dom.aiWeeklyMessage.textContent = '正在生成...';
-    dom.aiWeeklyMessage.className = 'form-message';
+    showWeeklyMessage('正在生成...', '', false);
 
     fetch(API_BASE + '/api/ai/weekly', { method: 'POST' })
       .then(function (res) {
@@ -265,15 +271,20 @@ var DDLRadar = (function () {
       })
       .then(function (json) {
         var advice = extractAdvice(json);
-        dom.aiWeeklyMessage.textContent = '生成成功';
-        dom.aiWeeklyMessage.className = 'form-message form-message--success';
-        openAiModal('AI 周总结', advice || '无法获取周总结内容');
+        if (advice) {
+          showWeeklyMessage('生成成功', 'success');
+          openAiModal('AI 周总结', advice);
+        } else {
+          var mockSummary = buildMockWeeklySummary(tasksCache || []);
+          showWeeklyMessage('AI 返回为空，已降级为 Mock AI', 'success');
+          openAiModal('Mock AI 周总结', mockSummary);
+        }
       })
       .catch(function (err) {
         console.error('周总结生成失败:', err.message || err);
-        dom.aiWeeklyMessage.textContent = '生成失败';
-        dom.aiWeeklyMessage.className = 'form-message form-message--error';
-        openAiModal('AI 周总结', escHtml(err.message || '周总结生成失败，请稍后重试'), true);
+        var mockSummary = buildMockWeeklySummary(tasksCache || []);
+        showWeeklyMessage('AI 获取失败，已降级为 Mock AI', 'success');
+        openAiModal('Mock AI 周总结', mockSummary);
       });
   }
 
@@ -319,6 +330,73 @@ var DDLRadar = (function () {
     return null;
   }
 
+  function buildMockAdvice(task) {
+    var lines = [];
+    var title = task.title || '当前任务';
+    var course = task.course || '未填写课程';
+    var deadline = task.deadline || '未设置截止时间';
+    var priority = PRIORITY_LABEL[task.priority] || '中';
+    var status = STATUS_LABEL[task.status] || '待办';
+    var typeLabel = TYPE_LABEL[task.task_type] || '其他';
+
+    lines.push('## Mock AI 建议');
+    lines.push('');
+    lines.push('- 任务：' + title);
+    lines.push('- 课程：' + course);
+    lines.push('- 类型：' + typeLabel);
+    lines.push('- 截止时间：' + deadline);
+    lines.push('- 优先级：' + priority);
+    lines.push('- 当前状态：' + status);
+    lines.push('');
+    lines.push('### 建议安排');
+    lines.push('1. 先明确提交要求，并把任务拆成 2~4 个小步骤。');
+    lines.push('2. 先完成最影响得分的核心部分，再处理补充内容。');
+    lines.push('3. 若截止时间较近，优先保证可提交版本，而不是一开始追求完美。');
+    lines.push('4. 提交前至少留一次检查时间，确认格式、命名和提交入口。');
+
+    if (task.description) {
+      lines.push('');
+      lines.push('### 额外提醒');
+      lines.push('- 建议先根据描述整理关键词，再安排实现顺序。');
+    }
+
+    return lines.join('\n');
+  }
+
+  function buildMockWeeklySummary(tasks) {
+    var total = tasks.length;
+    var todo = 0;
+    var doing = 0;
+    var done = 0;
+    var highRisk = 0;
+    var overdue = 0;
+
+    tasks.forEach(function (task) {
+      if (task.status === 'todo') todo++;
+      if (task.status === 'doing') doing++;
+      if (task.status === 'done') done++;
+      if (task.risk_level === 'high') highRisk++;
+      if (task.risk_level === 'overdue') overdue++;
+    });
+
+    return [
+      '## Mock AI 周总结',
+      '',
+      '- 总任务数：' + total,
+      '- 待办：' + todo,
+      '- 进行中：' + doing,
+      '- 已完成：' + done,
+      '- 高风险：' + highRisk,
+      '- 已逾期：' + overdue,
+      '',
+      '### 本周建议',
+      '1. 先处理高风险和临近截止的任务。',
+      '2. 把待办任务拆成更小的执行步骤，减少拖延。',
+      '3. 每门课至少保留一个缓冲时间段，防止任务堆积。',
+      '4. 已完成任务及时归档，保持面板清晰。'
+    ].join('\n');
+  }
+
   function extractAdvice(json) {
     if (typeof json === 'string') return json;
 
@@ -337,9 +415,46 @@ var DDLRadar = (function () {
     return null;
   }
 
-  function showAiMessage(msg, type) {
+  function showAiMessage(msg, type, autoHide) {
+    if (aiMessageTimer) {
+      clearTimeout(aiMessageTimer);
+      aiMessageTimer = null;
+    }
+
     dom.aiMessage.textContent = msg;
     dom.aiMessage.className = 'form-message' + (type ? ' form-message--' + type : '');
+    dom.aiMessage.classList.remove('form-message--fadeout');
+
+    if (autoHide !== false) {
+      aiMessageTimer = setTimeout(function () {
+        dom.aiMessage.classList.add('form-message--fadeout');
+        setTimeout(function () {
+          dom.aiMessage.textContent = '';
+          dom.aiMessage.className = 'form-message';
+        }, 600);
+      }, 2200);
+    }
+  }
+
+  function showWeeklyMessage(msg, type, autoHide) {
+    if (weeklyMessageTimer) {
+      clearTimeout(weeklyMessageTimer);
+      weeklyMessageTimer = null;
+    }
+
+    dom.aiWeeklyMessage.textContent = msg;
+    dom.aiWeeklyMessage.className = 'form-message' + (type ? ' form-message--' + type : '');
+    dom.aiWeeklyMessage.classList.remove('form-message--fadeout');
+
+    if (autoHide !== false) {
+      weeklyMessageTimer = setTimeout(function () {
+        dom.aiWeeklyMessage.classList.add('form-message--fadeout');
+        setTimeout(function () {
+          dom.aiWeeklyMessage.textContent = '';
+          dom.aiWeeklyMessage.className = 'form-message';
+        }, 600);
+      }, 2200);
+    }
   }
 
   function updateDashboardCards(data) {
@@ -426,9 +541,25 @@ var DDLRadar = (function () {
       });
   }
 
-  function showFormMessage(msg, type) {
+  function showFormMessage(msg, type, autoHide) {
+    if (formMessageTimer) {
+      clearTimeout(formMessageTimer);
+      formMessageTimer = null;
+    }
+
     dom.formMessage.textContent = msg;
     dom.formMessage.className = 'form-message form-message--' + type;
+    dom.formMessage.classList.remove('form-message--fadeout');
+
+    if (autoHide !== false) {
+      formMessageTimer = setTimeout(function () {
+        dom.formMessage.classList.add('form-message--fadeout');
+        setTimeout(function () {
+          dom.formMessage.textContent = '';
+          dom.formMessage.className = 'form-message';
+        }, 600);
+      }, 2200);
+    }
   }
 
   function handleTaskListClick(e) {

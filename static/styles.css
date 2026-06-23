@@ -241,6 +241,25 @@ section + section {
   border-radius: 10px;
   font-size: 13px;
   font-weight: 600;
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+  transition:
+    opacity 0.6s ease,
+    transform 0.6s ease,
+    visibility 0.6s ease;
+  will-change: opacity, transform;
+}
+
+.form-message:empty {
+  display: none;
+}
+
+.form-message--fadeout {
+  opacity: 0;
+  transform: translateY(-6px);
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .form-message--success {
