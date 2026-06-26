@@ -2,15 +2,21 @@ use crate::models::{Priority, Status};
 use chrono::NaiveDateTime;
 
 // 风险计算结果结构体
-// risk_level 用于前端展示和Dashboard统计
-// is_overlude用于判断是否已预期
+// risk_level 用于前端展示和 Dashboard 统计
+// is_overdue 用于判断是否已逾期
 #[derive(Debug, Clone)]
 pub struct RiskInfo {
     pub risk_level: String,
     pub is_overdue: bool,
 }
 
-/// Stub implementation — Role C replaces this with real risk calculation logic.
+/// 计算任务风险等级
+/// 返回英文代码以便前后端统一处理：
+///   "completed" - 已完成
+///   "overdue"   - 已逾期
+///   "high"      - 高风险
+///   "mid"       - 中风险
+///   "low"       - 低风险
 pub fn calculate_risk(
     _deadline: &str,
     _priority: &Priority,
@@ -19,17 +25,17 @@ pub fn calculate_risk(
 ) -> RiskInfo {
     if *status == Status::Done {
         return RiskInfo {
-            risk_level: "已完成".to_string(),
+            risk_level: "completed".to_string(),
             is_overdue: false,
         };
     }
 
-    //deadline 格式异常时，为避免接口崩溃，返回默认低风险,后续改进点之一。
+    // deadline 格式异常时，为避免接口崩溃，返回默认低风险
     let deadline_time = match NaiveDateTime::parse_from_str(_deadline, "%Y-%m-%d %H:%M") {
         Ok(t) => t,
         Err(_) => {
             return RiskInfo {
-                risk_level: "低风险".to_string(),
+                risk_level: "low".to_string(),
                 is_overdue: false,
             };
         }
@@ -39,7 +45,7 @@ pub fn calculate_risk(
 
     if remaining.num_seconds() < 0 {
         return RiskInfo {
-            risk_level: "已逾期".to_string(),
+            risk_level: "overdue".to_string(),
             is_overdue: true,
         };
     }
@@ -48,21 +54,21 @@ pub fn calculate_risk(
 
     // 如果任务还有24小时到期，一律归为高风险
     let risk_level = if hours <= 24 {
-        "高风险"
+        "high"
     } else if hours <= 72 {
-        // 如果任务还有72小时到期，那么高优先权的任务归为高风险，其他归为中风险
+        // 如果任务还有72小时到期，那么高优先级的任务归为高风险，其他归为中风险
         match _priority {
-            Priority::High => "高风险",
-            _ => "中风险",
+            Priority::High => "high",
+            _ => "mid",
         }
     } else if hours <= 168 {
         // 逻辑同上
         match _priority {
-            Priority::High => "中风险",
-            _ => "低风险",
+            Priority::High => "mid",
+            _ => "low",
         }
     } else {
-        "低风险"
+        "low"
     };
 
     RiskInfo {
@@ -71,7 +77,7 @@ pub fn calculate_risk(
     }
 }
 
-//测试用例
+// 测试用例
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -90,7 +96,7 @@ mod tests {
             dt("2026-06-19 23:59"),
         );
 
-        assert_eq!(result.risk_level, "已完成");
+        assert_eq!(result.risk_level, "completed");
         assert!(!result.is_overdue);
     }
 
@@ -103,7 +109,7 @@ mod tests {
             dt("2026-06-21 00:00"),
         );
 
-        assert_eq!(result.risk_level, "已逾期");
+        assert_eq!(result.risk_level, "overdue");
         assert!(result.is_overdue);
     }
 
@@ -116,7 +122,7 @@ mod tests {
             dt("2026-06-20 10:00"),
         );
 
-        assert_eq!(result.risk_level, "高风险");
+        assert_eq!(result.risk_level, "high");
         assert!(!result.is_overdue);
     }
 
@@ -129,7 +135,7 @@ mod tests {
             dt("2026-06-20 10:00"),
         );
 
-        assert_eq!(result.risk_level, "低风险");
+        assert_eq!(result.risk_level, "low");
         assert!(!result.is_overdue);
     }
 }

@@ -28,7 +28,7 @@ pub async fn dashboard(
         if risk_info.is_overdue {
             overdue_count += 1;
         }
-        if risk_info.risk_level == "高风险" || risk_info.risk_level == "已逾期" {
+        if risk_info.risk_level == "high" || risk_info.risk_level == "overdue" {
             high_risk_count += 1;
         }
     }
