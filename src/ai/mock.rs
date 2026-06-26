@@ -1,47 +1,47 @@
 use super::{AiAdvisor, AiError, AiTaskInfo};
-// use super::now_string;
 use super::utils::{now_string, estimate_available_days};
-use crate::models::{TaskType,Status,Priority,TaskWithRisk,Task};
+use crate::models::{TaskType, Status, Priority, TaskWithRisk, Task};
+
 pub struct MockAiAdvisor;
 
-// 这是一个mock风格的模板化建议
+// 这是一个 mock 风格的模板化建议
 
 fn generate_exam_advice(task_info: &AiTaskInfo, days: usize, priority_note: &str) -> String {
     let plan = match days {
         0..=1 => format!(
-            "⚠️ 时间紧迫！仅剩 {} 天，建议：\n\
-            📖 快速浏览核心考点和公式\n\
-            📖 做几道重点题型熟悉思路\n\
-            📖 保持冷静，调整心态\n\
-            📖 确保休息充足，以最佳状态应考",
+            "⏰ 时间紧迫！仅剩 {} 天，建议：\n\
+            📉 快速浏览核心考点和公式\n\
+            📉 做几道重点题型熟悉思路\n\
+            📉 保持冷静，调整心态\n\
+            📉 确保休息充足，以最佳状态应考",
             days
         ),
         2..=3 => format!(
-            "⏰ 时间较紧，剩余 {} 天，建议：\n\
-            📖 第 1 天：梳理重点知识框架 + 做典型例题\n\
-            📖 第 2 天：查漏补缺，模拟练习\n\
-            📖 如有第 3 天：回顾错题，调整心态",
+            "⚡ 时间较紧，剩余 {} 天，建议：\n\
+            📉 第 1 天：梳理重点知识框架 + 做典型例题\n\
+            📉 第 2 天：查漏补缺，模拟练习\n\
+            📉 如有第 3 天：回顾错题，调整心态",
             days
         ),
         4..=7 => format!(
-            "📚 剩余 {} 天，建议分阶段复习：\n\
-            📖 第 1~2 天：梳理知识框架，整理重点\n\
-            📖 第 3~4 天：做典型例题和往年试题\n\
-            📖 第 5~6 天：模拟练习 + 查漏补缺\n\
-            📖 第 7 天：最后浏览，调整心态",
+            "📎 剩余 {} 天，建议分阶段复习：\n\
+            📉 第 1~2 天：梳理知识框架，整理重点\n\
+            📉 第 3~4 天：做典型例题和往年试题\n\
+            📉 第 5~6 天：模拟练习 + 查漏补缺\n\
+            📉 第 7 天：最后浏览，调整心态",
             days
         ),
         _ => format!(
-            "📚 时间充裕，剩余 {} 天，建议系统复习：\n\
-            📖 前期：梳理知识框架，整理重点和公式\n\
-            📖 中期：分模块做例题，攻克薄弱环节\n\
-            📖 后期：模拟练习 + 限时训练\n\
-            📖 考前 1~2 天：回顾错题，调整心态",
+            "📎 时间充裕，剩余 {} 天，建议系统复习：\n\
+            📉 前期：梳理知识框架，整理重点和公式\n\
+            📉 中期：分模块做题，攻克薄弱环节\n\
+            📉 后期：模拟练习 + 限时训练\n\
+            📉 考前 1~2 天：回顾错题，调整心态",
             days
         ),
     };
     format!(
-        "📚 复习计划建议：「{}」\n\n{}\n\n{}\n\n💡 提示：距离考试约 {} 天，请根据自身情况灵活调整复习节奏。\n\n📅 考试时间：{}",
+        "📎 复习计划建议：『{}』\n\n{}\n\n{}\n\n💕 提示：距离考试仅 {} 天，请根据自身情况灵活调整复习节奏。\n\n📮 考试时间：{}",
         task_info.title, priority_note, plan, days, task_info.deadline
     )
 }
@@ -54,13 +54,13 @@ impl AiAdvisor for MockAiAdvisor {
         let task_type=task_info.task_type.clone();
         let status=task_info.status.clone();
         let priority=task_info.priority.clone();
-        
+
         let now_str = now_string();
 
         // 如果已完成
         if status == Status::Done  {
             return Ok(format!(
-                "「{}」已完成！做得好！建议回顾一下学习笔记，巩固知识点。\n\n{}",
+                "『{}』已完成！做得好！建议回顾一下学习笔记，巩固知识点。\n\n{}",
                 task_info.title,
                 now_str,
             ));
@@ -68,9 +68,9 @@ impl AiAdvisor for MockAiAdvisor {
 
         // 如果已逾期
         let tim=estimate_available_days(&task_info.deadline);
-        if tim < 0 { 
+        if tim < 0 {
             return Ok(format!(
-                "「{}」已逾期。建议尽快与老师沟通，看是否可以补交。同时反思逾期原因，避免再次发生。\n\n{}",
+                "『{}』已逾期。建议尽快与老师沟通，看是否可以补交。同时反思逾期原因，避免再次发生。\n\n{}",
                 task_info.title,
                 now_str,
             ));
@@ -87,14 +87,14 @@ impl AiAdvisor for MockAiAdvisor {
         match task_type {
             TaskType::Project => {
                 Ok(format!(
-                    "📋 任务拆解建议：「{}」\n\n{}\n\n建议拆分为以下步骤：\n\
+                    "📵 任务拆解建议：『{}』\n\n{}\n\n建议拆分为以下步骤：\n\
                     1. 确定项目需求和范围\n\
                     2. 查阅相关资料和文献\n\
                     3. 设计项目方案和架构\n\
                     4. 逐步实现各模块功能\n\
                     5. 进行测试和调试\n\
                     6. 整理文档和报告\n\
-                    7. 准备演示材料\n\n💡 提示：课程项目通常工作量较大，建议提前规划并定期检查进度。\n\n📅 截止时间：{}\n\n{}",
+                    7. 准备演示材料\n\n💕 提示：课程项目通常工作量较大，建议提前规划并定期检查进度。\n\n📮 截止时间：{}\n\n{}",
                     task_info.title, priority_note, task_info.deadline, now_str,
                 ))
             }
@@ -105,22 +105,22 @@ impl AiAdvisor for MockAiAdvisor {
             }
             TaskType::Homework => {
                 Ok(format!(
-                    "✏️ 完成建议：「{}」\n\n{}\n\n建议完成步骤：\n\
+                    "🧍 完成建议：『{}』\n\n{}\n\n建议完成步骤：\n\
                     1. 仔细阅读作业要求\n\
                     2. 回顾相关课程内容\n\
                     3. 独立完成作业题目\n\
                     4. 检查答案和格式\n\
-                    5. 按时提交\n\n💡 提示：建议在截止时间前至少 1 天完成，留出检查时间。\n\n📅 截止时间：{}\n\n{}",
+                    5. 按时提交\n\n💕 提示：建议在截止时间前至少 1 天完成，留出检查时间。\n\n📮 截止时间：{}\n\n{}",
                     task_info.title, priority_note, task_info.deadline, now_str,
                 ))
             }
             _ => {
                 Ok(format!(
-                    "📝 任务建议：「{}」\n\n{}\n\n建议行动：\n\
+                    "📑 任务建议：『{}』\n\n{}\n\n建议行动：\n\
                     1. 明确任务具体要求\n\
                     2. 评估所需时间和资源\n\
                     3. 制定执行计划\n\
-                    4. 分步骤完成\n\n💡 提示：合理规划时间，避免最后赶工。\n\n📅 截止时间：{}\n\n{}",
+                    4. 分步骤完成\n\n💕 提示：合理规划时间，避免最后赶工。\n\n📮 截止时间：{}\n\n{}",
                     task_info.title, priority_note, task_info.deadline, now_str,
                 ))
             }
@@ -131,20 +131,20 @@ impl AiAdvisor for MockAiAdvisor {
         tasks: &[crate::models::TaskWithRisk]
     ) -> Result<String, AiError> {
         let now_str=now_string();
-        
+
         if tasks.is_empty(){
-            return Ok(format!("🎉 未来 7 天内没有截止的任务，可以稍微放松一下！\n\n{}", now_str));
+            return Ok(format!("🎀 未来 7 天内没有截止的任务，可以稍微放松一下！\n\n{}", now_str));
         }
-        
+
         let mut summary=format!(
-            "📊 本周 DDL 总结\n\n未来 7 天共有 {} 个任务需要关注：\n\n",
+            "📳 本周 DDL 总结\n\n未来 7 天共有 {} 个任务需要关注：\n\n",
             tasks.len()
         );
-        
+
         for (i,task) in tasks.iter().enumerate(){
             let risk_emoji=match task.risk_level.as_str() {
-                "高风险" | "已逾期" => "🔴",
-                "中风险" => "🟡",
+                "high" | "overdue" => "🔶",
+                "mid" => "🟡",
                 _ => "🟢",
             };
             let priority_note = match task.task.priority {
@@ -157,10 +157,10 @@ impl AiAdvisor for MockAiAdvisor {
                 TaskType::Exam => "Exam",
                 TaskType::Homework => "Homework",
                 _ => "Others",
-                 
+
             };
             summary.push_str(&format!(
-                "{}. {} {}「{}」- {} | 截止：{} | 优先级：{}\n",
+                "{}. {} {}『{}』| {} | 截止：{} | 优先级：{}\n",
                 i + 1,
                 risk_emoji,
                 type_note,
@@ -170,10 +170,10 @@ impl AiAdvisor for MockAiAdvisor {
                 priority_note,
             ));
         }
-        let high_count=tasks.iter().filter(|t| t.risk_level == "高风险" || t.risk_level == "已逾期").count();
+        let high_count=tasks.iter().filter(|t| t.risk_level == "high" || t.risk_level == "overdue").count();
         if high_count > 0 {
             summary.push_str(&format!(
-                "⚠️ 提示：本周有 {} 个高风险/逾期任务，建议优先处理！\n\n",
+                "⏰ 提示：本周有 {} 个高风险/逾期任务，建议优先处理！\n\n",
                 high_count
             ));
         } else {
@@ -280,7 +280,7 @@ mod tests {
         let mock=MockAiAdvisor{};
         let tasks = vec![
             crate::models::TaskWithRisk {
-                task: 
+                task:
                 Task {
                     id: 0,
                     title: "高风险任务".to_string(),
@@ -293,7 +293,7 @@ mod tests {
                     created_at: "".to_string(),
                     updated_at: "".to_string(),
                 },
-                risk_level: "高风险".to_string(),
+                risk_level: "high".to_string(),
                 is_overdue: false,
             },
             crate::models::TaskWithRisk {
@@ -309,7 +309,7 @@ mod tests {
                     created_at: "".to_string(),
                     updated_at: "".to_string(),
                 },
-                risk_level: "中风险".to_string(),
+                risk_level: "mid".to_string(),
                 is_overdue: false,
             },
         ];
