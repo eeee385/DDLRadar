@@ -2,3 +2,6 @@
 *.db
 .claude/
 Cargo.lock
+Video Project.mp4
+/videos/
+/Documents/
