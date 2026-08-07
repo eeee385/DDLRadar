@@ -16,23 +16,24 @@
     <section id="dashboard" class="dashboard-section">
       <h2 class="section-title">概览面板</h2>
       <div class="dashboard-grid">
-        <div class="dashboard-card" id="stat-total">
+        <div class="dashboard-card" id="stat-total" data-filter="total" title="点击查看全部任务">
           <span class="card-value">--</span>
           <span class="card-label">总任务数</span>
         </div>
-        <div class="dashboard-card" id="stat-todo">
+        <div class="dashboard-card" id="stat-todo" data-filter="todo" title="点击查看待办任务">
           <span class="card-value">--</span>
           <span class="card-label">待办任务</span>
         </div>
-        <div class="dashboard-card dashboard-card--warning" id="stat-high-risk">
+        <div class="dashboard-card dashboard-card--warning" id="stat-high-risk" data-filter="high-risk" title="点击查看高风险任务">
           <span class="card-value">--</span>
           <span class="card-label">高风险任务</span>
         </div>
-        <div class="dashboard-card dashboard-card--danger" id="stat-overdue">
+        <div class="dashboard-card dashboard-card--danger" id="stat-overdue" data-filter="overdue" title="点击查看已逾期任务">
           <span class="card-value">--</span>
           <span class="card-label">已逾期任务</span>
         </div>
       </div>
+      <p class="dashboard-hint">点击卡片可筛选下方的任务列表</p>
     </section>
 
     <section class="task-create-section">
@@ -98,9 +99,20 @@
     </section>
 
     <section id="task-list-section">
-      <h2 class="section-title">任务列表</h2>
+      <div class="section-heading">
+        <h2 class="section-title">任务列表</h2>
+        <div class="section-heading__filter">
+          <span id="filter-badge" class="filter-badge" hidden></span>
+          <button id="btn-clear-filter" class="btn-link" type="button" hidden>清除筛选</button>
+        </div>
+      </div>
       <div class="task-list-container">
         <div id="task-list"></div>
+        <div id="pagination" class="pagination" hidden>
+          <button id="page-prev" class="btn btn--sm btn--pagination" type="button">上一页</button>
+          <span id="page-info" class="pagination-info"></span>
+          <button id="page-next" class="btn btn--sm btn--pagination" type="button">下一页</button>
+        </div>
       </div>
     </section>
 
