@@ -8,6 +8,12 @@ var DDLRadar = (function () {
   var weeklyMessageTimer = null;
   var formMessageTimer = null;
 
+  // 分页与 Dashboard 筛选状态
+  var currentPage = 1;
+  var pageSize = 5;
+  var activeFilter = null; // null | 'todo' | 'high-risk' | 'overdue'
+  var totalPages = 1;
+
   var TYPE_LABEL = { homework: '作业', exam: '考试', project: '课程项目', other: '其他' };
   var PRIORITY_LABEL = { high: '高', mid: '中', low: '低' };
   var STATUS_LABEL = { todo: '待办', doing: '进行中', done: '已完成' };
@@ -63,6 +69,18 @@ var DDLRadar = (function () {
     dom.btnWeeklySummary.addEventListener('click', handleWeeklySummary);
     dom.btnSaveConfig.addEventListener('click', handleSaveConfig);
     dom.btnResetConfig.addEventListener('click', handleResetConfig);
+
+    dom.pagination = document.getElementById('pagination');
+    dom.pagePrev = document.getElementById('page-prev');
+    dom.pageNext = document.getElementById('page-next');
+    dom.pageInfo = document.getElementById('page-info');
+    dom.filterBadge = document.getElementById('filter-badge');
+    dom.btnClearFilter = document.getElementById('btn-clear-filter');
+
+    dom.dashboard.addEventListener('click', handleDashboardClick);
+    dom.pagePrev.addEventListener('click', function () { goToPage(currentPage - 1); });
+    dom.pageNext.addEventListener('click', function () { goToPage(currentPage + 1); });
+    dom.btnClearFilter.addEventListener('click', function () { applyFilter('total'); });
 
     document.addEventListener('click', handleGlobalClick);
     document.addEventListener('keydown', handleGlobalKeydown);
@@ -135,7 +153,7 @@ var DDLRadar = (function () {
           throw new Error('未知响应格式');
         }
         tasksCache = tasks;
-        renderTasks(tasks);
+        refreshList();
         updateAiTaskSelect(tasks);
       })
       .catch(function (err) {
@@ -143,6 +161,7 @@ var DDLRadar = (function () {
         tasksCache = [];
         dom.taskList.innerHTML =
           '<p class="placeholder-text" style="color:#d63031;">任务列表加载失败，请检查后端是否运行</p>';
+        if (dom.pagination) dom.pagination.hidden = true;
         updateAiTaskSelect([]);
       });
   }
@@ -718,9 +737,10 @@ var DDLRadar = (function () {
     return String(str).replace('T', ' ');
   }
 
-  function renderTasks(tasks) {
+  function renderTasks(tasks, emptyMessage) {
     if (!tasks || tasks.length === 0) {
-      dom.taskList.innerHTML = '<p class="placeholder-text">暂无任务数据，请先添加任务</p>';
+      dom.taskList.innerHTML =
+        '<p class="placeholder-text">' + (emptyMessage || '暂无任务数据，请先添加任务') + '</p>';
       return;
     }
 
@@ -729,6 +749,98 @@ var DDLRadar = (function () {
       html += buildCard(task);
     });
     dom.taskList.innerHTML = html;
+  }
+
+  // --- 分页与 Dashboard 筛选 ---
+
+  function refreshList() {
+    var filtered = getFilteredTasks();
+    totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
+    var start = (currentPage - 1) * pageSize;
+    var pageTasks = filtered.slice(start, start + pageSize);
+
+    var emptyMessage = tasksCache.length === 0
+      ? '暂无任务数据，请先添加任务'
+      : '该筛选条件下暂无任务';
+    renderTasks(pageTasks, emptyMessage);
+    renderPagination(filtered.length);
+    updateFilterBadge();
+    updateDashboardActiveState();
+  }
+
+  function getFilteredTasks() {
+    if (!activeFilter) return tasksCache.slice();
+    return tasksCache.filter(function (task) {
+      if (activeFilter === 'todo') return task.status === 'todo';
+      if (activeFilter === 'high-risk') {
+        return task.risk_level === 'high' || task.risk_level === 'overdue';
+      }
+      if (activeFilter === 'overdue') return task.is_overdue === true;
+      return true;
+    });
+  }
+
+  function renderPagination(totalCount) {
+    if (!dom.pagination) return;
+    if (totalCount <= pageSize) {
+      dom.pagination.hidden = true;
+      return;
+    }
+    dom.pagination.hidden = false;
+    dom.pageInfo.textContent =
+      '共 ' + totalCount + ' 条 · 第 ' + currentPage + ' / ' + totalPages + ' 页';
+    dom.pagePrev.disabled = currentPage <= 1;
+    dom.pageNext.disabled = currentPage >= totalPages;
+  }
+
+  function goToPage(page) {
+    if (page < 1 || page > totalPages) return;
+    currentPage = page;
+    refreshList();
+    var taskListSection = document.getElementById('task-list-section');
+    if (taskListSection) {
+      taskListSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  function updateFilterBadge() {
+    if (!dom.filterBadge || !dom.btnClearFilter) return;
+    var labels = { todo: '待办任务', 'high-risk': '高风险任务', overdue: '已逾期任务' };
+    var hasFilter = !!activeFilter;
+    dom.filterBadge.hidden = !hasFilter;
+    dom.btnClearFilter.hidden = !hasFilter;
+    dom.filterBadge.textContent = hasFilter ? '筛选：' + labels[activeFilter] : '';
+  }
+
+  function updateDashboardActiveState() {
+    var cards = document.querySelectorAll('.dashboard-card');
+    for (var i = 0; i < cards.length; i++) {
+      var key = cards[i].getAttribute('data-filter');
+      if (!key) continue;
+      var isActive = (key === 'total' && !activeFilter) || key === activeFilter;
+      cards[i].classList.toggle('is-active', isActive);
+    }
+  }
+
+  function applyFilter(key) {
+    activeFilter = (key === 'total') ? null : key;
+    currentPage = 1;
+    refreshList();
+  }
+
+  function handleDashboardClick(e) {
+    var card = e.target.closest('.dashboard-card');
+    if (!card) return;
+    var key = card.getAttribute('data-filter');
+    if (!key) return;
+    applyFilter(key);
+    var taskListSection = document.getElementById('task-list-section');
+    if (taskListSection) {
+      taskListSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   }
 
   function buildCard(task) {
