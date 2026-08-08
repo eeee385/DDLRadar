@@ -1,7 +1,7 @@
 var DDLRadar = (function () {
   'use strict';
 
-  var API_BASE = 'http://127.0.0.1:3000';
+  var API_BASE = '';
   var dom = {};
   var tasksCache = [];
   var aiMessageTimer = null;
