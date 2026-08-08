@@ -1,6 +1,6 @@
+use super::utils::{estimate_available_days, now_string};
 use super::{AiAdvisor, AiError, AiTaskInfo};
-use super::utils::{now_string, estimate_available_days};
-use crate::models::{TaskType, Status, Priority, TaskWithRisk, Task};
+use crate::models::{Priority, Status, TaskType};
 
 pub struct MockAiAdvisor;
 
@@ -47,27 +47,23 @@ fn generate_exam_advice(task_info: &AiTaskInfo, days: usize, priority_note: &str
 }
 
 impl AiAdvisor for MockAiAdvisor {
-    fn generate_advice(
-        &self,
-        task_info: &AiTaskInfo
-    ) -> Result<String, AiError> {
-        let task_type=task_info.task_type.clone();
-        let status=task_info.status.clone();
-        let priority=task_info.priority.clone();
+    fn generate_advice(&self, task_info: &AiTaskInfo) -> Result<String, AiError> {
+        let task_type = task_info.task_type.clone();
+        let status = task_info.status.clone();
+        let priority = task_info.priority.clone();
 
         let now_str = now_string();
 
         // 如果已完成
-        if status == Status::Done  {
+        if status == Status::Done {
             return Ok(format!(
                 "『{}』已完成！做得好！建议回顾一下学习笔记，巩固知识点。\n\n{}",
-                task_info.title,
-                now_str,
+                task_info.title, now_str,
             ));
         }
 
         // 如果已逾期
-        let tim=estimate_available_days(&task_info.deadline);
+        let tim = estimate_available_days(&task_info.deadline);
         if tim < 0 {
             return Ok(format!(
                 "『{}』已逾期。建议尽快与老师沟通，看是否可以补交。同时反思逾期原因，避免再次发生。\n\n{}",
@@ -75,7 +71,6 @@ impl AiAdvisor for MockAiAdvisor {
                 now_str,
             ));
         }
-
 
         // 根据任务类型生成建议
         let priority_note = match priority {
@@ -128,21 +123,24 @@ impl AiAdvisor for MockAiAdvisor {
     }
     fn generate_weekly_summary(
         &self,
-        tasks: &[crate::models::TaskWithRisk]
+        tasks: &[crate::models::TaskWithRisk],
     ) -> Result<String, AiError> {
-        let now_str=now_string();
+        let now_str = now_string();
 
-        if tasks.is_empty(){
-            return Ok(format!("🎀 未来 7 天内没有截止的任务，可以稍微放松一下！\n\n{}", now_str));
+        if tasks.is_empty() {
+            return Ok(format!(
+                "🎀 未来 7 天内没有截止的任务，可以稍微放松一下！\n\n{}",
+                now_str
+            ));
         }
 
-        let mut summary=format!(
+        let mut summary = format!(
             "📳 本周 DDL 总结\n\n未来 7 天共有 {} 个任务需要关注：\n\n",
             tasks.len()
         );
 
-        for (i,task) in tasks.iter().enumerate(){
-            let risk_emoji=match task.risk_level.as_str() {
+        for (i, task) in tasks.iter().enumerate() {
+            let risk_emoji = match task.risk_level.as_str() {
                 "high" | "overdue" => "🔶",
                 "mid" => "🟡",
                 _ => "🟢",
@@ -152,12 +150,11 @@ impl AiAdvisor for MockAiAdvisor {
                 Priority::Mid => "Mid",
                 _ => "Low",
             };
-            let type_note=match task.task.task_type {
+            let type_note = match task.task.task_type {
                 TaskType::Project => "Project",
                 TaskType::Exam => "Exam",
                 TaskType::Homework => "Homework",
                 _ => "Others",
-
             };
             summary.push_str(&format!(
                 "{}. {} {}『{}』| {} | 截止：{} | 优先级：{}\n",
@@ -170,7 +167,10 @@ impl AiAdvisor for MockAiAdvisor {
                 priority_note,
             ));
         }
-        let high_count=tasks.iter().filter(|t| t.risk_level == "high" || t.risk_level == "overdue").count();
+        let high_count = tasks
+            .iter()
+            .filter(|t| t.risk_level == "high" || t.risk_level == "overdue")
+            .count();
         if high_count > 0 {
             summary.push_str(&format!(
                 "⏰ 提示：本周有 {} 个高风险/逾期任务，建议优先处理！\n\n",
@@ -188,105 +188,83 @@ impl AiAdvisor for MockAiAdvisor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::Task;
+
+    fn deadline_after_days(days: i64) -> String {
+        (chrono::Local::now().naive_local() + chrono::Duration::days(days))
+            .format("%Y-%m-%d %H:%M")
+            .to_string()
+    }
 
     #[test]
     fn test_project_advice() {
-        let mock=MockAiAdvisor{};
+        let mock = MockAiAdvisor {};
         let task_info = AiTaskInfo {
             title: "软件工程大作业".to_string(),
             course: "软件工程".to_string(),
             task_type: TaskType::Project,
-            deadline: "2026-06-20 23:59".to_string(),
+            deadline: deadline_after_days(30),
             priority: Priority::High,
             status: Status::Todo,
             description: "".to_string(),
         };
-        let result = mock.generate_advice(&task_info);
-        match result {
-            Ok(advice) => {
-                println!("{}",advice);
-                assert!(advice.contains("软件工程大作业"));
-                assert!(advice.contains("任务拆解建议"));
-                assert!(advice.contains("高"));
-            }
-            Err(error) => {
-                eprintln!("获取建议失败：{:?}", error);
-                std::process::exit(1);
-            }
-        }
+        let advice = mock
+            .generate_advice(&task_info)
+            .expect("项目建议应生成成功");
+        assert!(advice.contains("软件工程大作业"));
+        assert!(advice.contains("任务拆解建议"));
+        assert!(advice.contains("该任务优先级为「高」"));
     }
 
     #[test]
     fn test_exam_advice() {
-        let mock=MockAiAdvisor{};
+        let mock = MockAiAdvisor {};
         let task_info = AiTaskInfo {
             title: "高等数学期末".to_string(),
             course: "高等数学".to_string(),
             task_type: TaskType::Exam,
-            deadline: "2026-06-25 09:00".to_string(),
+            deadline: deadline_after_days(10),
             priority: Priority::High,
             status: Status::Todo,
             description: "".to_string(),
         };
-        let result = mock.generate_advice(&task_info);
-        match result {
-            Ok(advice) => {
-                println!("{}",advice);
-                assert!(advice.contains("高等数学期末"));
-                assert!(advice.contains("复习计划"));
-            }
-            Err(error) => {
-                eprintln!("获取建议失败：{:?}", error);
-                std::process::exit(1);
-            }
-        }
+        let advice = mock
+            .generate_advice(&task_info)
+            .expect("考试建议应生成成功");
+        assert!(advice.contains("高等数学期末"));
+        assert!(advice.contains("复习计划"));
+        assert!(!advice.contains("已逾期"));
     }
 
     #[test]
     fn test_done_advice() {
-        let mock=MockAiAdvisor{};
+        let mock = MockAiAdvisor {};
         let task_info = AiTaskInfo {
             title: "已完成作业".to_string(),
             course: "测试课程".to_string(),
             task_type: TaskType::Homework,
             deadline: "2026-01-01 00:00".to_string(),
             priority: Priority::Low,
-            status: Status::Todo,
+            status: Status::Done,
             description: "".to_string(),
         };
-        let result = mock.generate_advice(&task_info);
-        match result {
-            Ok(advice) => {
-                println!("{}",advice);
-                assert!(advice.contains("已完成"));
-            }
-            Err(error) => {
-                eprintln!("获取建议失败：{:?}", error);
-                std::process::exit(1);
-            }
-        }
-    }
-
-    #[test]
-    fn test_estimate_available_days() {
-        use chrono::Local;
-        let future = Local::now().naive_local() + chrono::Duration::days(5);
-        let deadline = future.format("%Y-%m-%d %H:%M").to_string();
-        let days = estimate_available_days(&deadline);
-        assert!(days >= 4 && days <= 6);
+        let advice = mock
+            .generate_advice(&task_info)
+            .expect("已完成任务应生成成功");
+        assert!(advice.contains("已完成！做得好！"));
+        assert!(!advice.contains("已逾期"));
     }
     #[test]
-    fn test_generate_weekly_summary(){
-        let mock=MockAiAdvisor{};
+    fn test_generate_weekly_summary() {
+        let mock = MockAiAdvisor {};
         let tasks = vec![
             crate::models::TaskWithRisk {
-                task:
-                Task {
+                task: Task {
                     id: 0,
                     title: "高风险任务".to_string(),
                     course: "课程A".to_string(),
                     task_type: TaskType::Homework,
-                    deadline: "2026-06-20 23:59".to_string(),
+                    deadline: deadline_after_days(2),
                     priority: Priority::High,
                     status: Status::Todo,
                     description: "".to_string(),
@@ -302,7 +280,7 @@ mod tests {
                     title: "中风险任务".to_string(),
                     course: "课程B".to_string(),
                     task_type: TaskType::Exam,
-                    deadline: "2026-06-22 09:00".to_string(),
+                    deadline: deadline_after_days(5),
                     priority: Priority::Mid,
                     status: Status::Todo,
                     description: "".to_string(),
@@ -313,18 +291,12 @@ mod tests {
                 is_overdue: false,
             },
         ];
-        let result = mock.generate_weekly_summary(&tasks);
-        match result {
-            Ok(summary) => {
-                println!("{}",summary);
-                assert!(summary.contains("本周 DDL 总结"));
-                assert!(summary.contains("高风险任务"));
-                assert!(summary.contains("中风险任务"));
-            }
-            Err(error) => {
-                eprintln!("获取总结失败：{:?}", error);
-                std::process::exit(1);
-            }
-        }
+        let summary = mock
+            .generate_weekly_summary(&tasks)
+            .expect("周总结应生成成功");
+        assert!(summary.contains("本周 DDL 总结"));
+        assert!(summary.contains("高风险任务"));
+        assert!(summary.contains("中风险任务"));
+        assert!(summary.contains("本周有 1 个高风险/逾期任务"));
     }
 }
