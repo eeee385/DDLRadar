@@ -12,6 +12,7 @@ use axum::Router;
 use rusqlite::Connection;
 use std::sync::{Arc, Mutex};
 use tower_http::cors::{Any, CorsLayer};
+use tower_http::services::ServeDir;
 
 use state::AppState;
 
@@ -73,6 +74,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             get(handlers::ai::get_config).post(handlers::ai::update_config),
         )
         .layer(cors)
+        .fallback_service(ServeDir::new("static").append_index_html_on_directories(true))
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;

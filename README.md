@@ -31,10 +31,12 @@ cd DDLradar
 # 编译并运行（首次需下载依赖，约 2-3 分钟）
 cargo run
 
-# 服务启动后监听在 http://localhost:3000
+# 服务启动后，在浏览器打开 http://localhost:3000
 ```
 
-启动后会在项目根目录自动创建 `ddlradar.db`（SQLite 数据库文件）。
+后端会同时提供 API 和 `static/` 目录中的前端页面，无需再手动打开
+`index.html` 或启动额外的静态文件服务器。启动后会在项目根目录自动创建
+`ddlradar.db`（SQLite 数据库文件）。
 
 ### 快速验证
 
@@ -395,16 +397,9 @@ POST /api/ai/suggest
 
 ### 前端 HTML 页面嵌入方式
 
-只需在项目根目录的 `static/` 目录放置 HTML/CSS/JS 文件，由前端同学自行决定如何托管。两种方案：
-
-**方案 A（推荐）**：后端托管静态文件。在 `main.rs` 中添加：
-```rust
-.use(axum::routing::get_service(
-    tower_http::services::ServeDir::new("static")
-).handle_error(|e| async move { ... }),)
-```
-
-**方案 B**：前端独立启动（如 VS Code Live Server），通过 CORS 跨域调用后端 API。
+Axum 已通过 `ServeDir` 托管项目根目录下的 `static/` 文件。运行 `cargo run`
+后直接访问 `http://localhost:3000` 即可打开完整页面；前端使用同源的 `/api`
+接口，不需要额外配置 API 地址或通过 VS Code Live Server 启动。
 
 ---
 
